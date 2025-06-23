@@ -12,10 +12,10 @@ app.use(bodyParser.json());
 const spawnerRegistry: Map<string, KubeSpawner> = new Map();
 
 class MockHub {
-  public public_host = 'http://127.0.0.1:8081';
-  public url = 'http://127.0.0.1:8081';
+  public public_host = 'http://127.0.0.1:8000';
+  public url = 'http://127.0.0.1:8000';
   public base_url = '/hub/';
-  public api_url = 'http://127.0.0.1:8081/hub/api';
+  public api_url = 'http://127.0.0.1:8000/hub/api';
 }
 
 class MockUser {
@@ -50,13 +50,15 @@ function getOrCreateSpawner(username: string, namespace: string): KubeSpawner {
   }
 
   const user = new MockUser(username);
-  const spawner = new KubeSpawner({
-    user,
-    namespace,
-    hubUrl: 'http://127.0.0.1:8081',
-    apiToken: 'dummy-token',
-    userOptions: {},
-  });
+ const spawner = new KubeSpawner({
+  user,
+  namespace,
+  hubUrl: 'http://127.0.0.1:8081',
+  apiToken: 'dummy-token',
+  userOptions: {},
+  command: ['start-notebook.sh'], // ✅ required field
+});
+
 
   user.spawner = spawner;
   spawnerRegistry.set(username, spawner);

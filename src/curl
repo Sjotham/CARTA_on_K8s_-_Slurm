@@ -4,7 +4,7 @@ curl -X POST http://127.0.0.1:8000/ \
   -d '{
     "jsonrpc": "2.0",
     "method": "create_k8s_pod",
-    "params": ["alice", "default"],
+    "params": ["sanele", "default"],
     "id": 1
   }'
 
@@ -14,7 +14,7 @@ curl -X POST http://127.0.0.1:8000/ \
   -d '{
     "jsonrpc": "2.0",
     "method": "create_k8s_pod",
-    "params": ["bob", "default"],
+    "params": ["jotham", "default"],
     "id": 2
   }'
 
