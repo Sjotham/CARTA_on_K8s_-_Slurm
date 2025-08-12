@@ -1,0 +1,163 @@
+# carta-on-k8s.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: carta
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: carta-mongo
+  namespace: carta
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: carta-mongo }
+  template:
+    metadata:
+      labels: { app: carta-mongo }
+    spec:
+      containers:
+        - name: mongo
+          image: mongo:6
+          ports: [{ containerPort: 27017, name: mongo }]
+          volumeMounts: [{ name: data, mountPath: /data/db }]
+      volumes:
+        - name: data
+          emptyDir: {}   # swap to a PVC for persistence
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: carta-mongo
+  namespace: carta
+spec:
+  selector: { app: carta-mongo }
+  ports: [{ port: 27017, targetPort: 27017, name: mongo }]
+  type: ClusterIP
+---
+# External BACKEND (cartavis/carta:beta) as its own pod + Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: carta-backend
+  namespace: carta
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: carta-backend }
+  template:
+    metadata:
+      labels: { app: carta-backend }
+    spec:
+      containers:
+        - name: backend
+          image: cartavis/carta:beta
+          ports: [{ containerPort: 3002, name: http }]
+          env:
+            - name: APPIMAGE_EXTRACT_AND_RUN
+              value: "1"
+          # Mount data if needed by your use case:
+          # volumeMounts:
+          #   - name: data
+          #     mountPath: /images
+      # volumes:
+      #   - name: data
+      #     persistentVolumeClaim:
+      #       claimName: <your-pvc-name>
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: carta-backend
+  namespace: carta
+spec:
+  selector: { app: carta-backend }
+  ports: [{ name: http, port: 3002, targetPort: 3002 }]
+  type: ClusterIP
+---
+# Controller config (Schema v2) – mirrors what worked for you
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: carta-controller-config
+  namespace: carta
+data:
+  config.json: |
+    {
+      "$schema": "https://cartavis.org/schemas/controller_config_schema_2.json",
+      "serverPort": 8000,
+      "serverInterface": "0.0.0.0",
+      "database": {
+        "uri": "mongodb://carta-mongo.carta.svc.cluster.local:27017",
+        "databaseName": "CARTA"
+      },
+      "backendPorts": { "min": 3002, "max": 3500 },
+      "rootFolderTemplate": "/images",
+      "baseFolderTemplate": "/images/{username}",
+      "processCommand": "/usr/bin/carta_backend",
+      "killCommand": "/usr/bin/carta-kill-script",
+      "dashboard": {
+        "backgroundColor": "#f6f8fa",
+        "bannerColor": "#606f7e",
+        "infoText": "Welcome to the CARTA server."
+      },
+      "authProviders": {
+        "pam": {
+          "publicKeyLocation": "/etc/carta/carta_public.pem",
+          "privateKeyLocation": "/etc/carta/carta_private.pem",
+          "issuer": "carta.example.com"
+        }
+      }
+    }
+---
+# Controller (2 replicas). If your custom controller expects env for an external backend,
+# we pass both DNS and (optionally) the literal ClusterIP.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: carta-controller
+  namespace: carta
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: carta-controller }
+  template:
+    metadata:
+      labels: { app: carta-controller }
+    spec:
+      containers:
+        - name: controller
+          image: carta-controller:latest
+          ports: [{ containerPort: 8000, name: http }]
+          volumeMounts:
+            - name: controller-config
+              mountPath: /etc/carta
+              readOnly: true
+            # Only needed if your controller container itself needs /images:
+            # - name: images
+            #   mountPath: /images
+          env:
+            # Your custom controller can read these and connect to the backend Service
+            - name: BACKEND_HOST
+              value: "carta-backend.carta.svc.cluster.local"
+            - name: BACKEND_PORT
+              value: "3002"
+          # Mount keys via Secret if you keep PAM enabled
+      volumes:
+        - name: controller-config
+          configMap:
+            name: carta-controller-config
+        # - name: images
+        #   persistentVolumeClaim:
+        #     claimName: <your-pvc-name>
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: carta-controller
+  namespace: carta
+spec:
+  selector: { app: carta-controller }
+  ports: [{ name: http, port: 8000, targetPort: 8000 }]
+  type: ClusterIP
