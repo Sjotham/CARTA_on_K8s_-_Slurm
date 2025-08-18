@@ -1,0 +1,28 @@
+# carta-backend.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: carta-backend
+  namespace: carta
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: carta-backend
+  template:
+    metadata:
+      labels:
+        app: carta-backend
+    spec:
+      containers:
+        - name: carta-backend
+          image: cartavis/carta:beta
+          ports:
+            - containerPort: 3002   # CARTA backend port
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
