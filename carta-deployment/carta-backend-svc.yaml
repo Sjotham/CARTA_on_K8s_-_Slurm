@@ -12,4 +12,3 @@ spec:
     - protocol: TCP
       port: 3002
       targetPort: 3002
-      nodePort: 30080   # external port on Minikube node
