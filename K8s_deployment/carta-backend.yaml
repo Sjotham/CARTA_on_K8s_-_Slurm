@@ -1,11 +1,19 @@
 # carta-backend.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: carta
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: carta-backend
   namespace: carta
+  labels:
+    app: carta-backend
 spec:
   replicas: 1
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: carta-backend
@@ -17,12 +25,30 @@ spec:
       containers:
         - name: carta-backend
           image: cartavis/carta:beta
+          imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 3002   # CARTA backend port
-          resources:
-            requests:
-              memory: "512Mi"
-              cpu: "250m"
-            limits:
-              memory: "1Gi"
-              cpu: "500m"
+            - name: http
+              containerPort: 3002
+          livenessProbe:
+            httpGet:
+              path: /config
+              port: 3002
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: carta-backend
+  namespace: carta
+  labels:
+    app: carta-backend
+spec:
+  type: ClusterIP
+  selector:
+    app: carta-backend
+  ports:
+    - name: http
+      port: 3002
+      targetPort: 3002
