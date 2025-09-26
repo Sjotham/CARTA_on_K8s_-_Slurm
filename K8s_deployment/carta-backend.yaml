@@ -1,9 +1,44 @@
 # carta-backend.yaml
+
+# 1) Namespace
 apiVersion: v1
 kind: Namespace
 metadata:
   name: carta
 ---
+# 2) Static hostPath PersistentVolume (cluster-scoped)
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: carta-pv
+  labels:
+    type: local
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: /data/carta
+    type: DirectoryOrCreate
+---
+# 3) PVC in carta namespace (binds to the static PV)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: carta-pvc
+  namespace: carta
+spec:
+  storageClassName: ""          # disables dynamic provisioning
+  volumeName: carta-pv
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+# 4) Deployment in carta namespace
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -22,6 +57,10 @@ spec:
       labels:
         app: carta-backend
     spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
       containers:
         - name: carta-backend
           image: cartavis/carta:beta
@@ -29,14 +68,42 @@ spec:
           ports:
             - name: http
               containerPort: 3002
+          args:
+            - --port
+            - "3002"
+            # If your build supports it, you can later add:
+            # - --top_level_folder
+            # - /images
+          volumeMounts:
+            - name: carta-storage
+              mountPath: /images
+          startupProbe:
+            tcpSocket: { port: 3002 }
+            failureThreshold: 30
+            periodSeconds: 2
+          readinessProbe:
+            tcpSocket: { port: 3002 }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
           livenessProbe:
-            httpGet:
-              path: /config
-              port: 3002
+            tcpSocket: { port: 3002 }
             initialDelaySeconds: 30
             periodSeconds: 10
             failureThreshold: 3
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 2Gi
+      volumes:
+        - name: carta-storage
+          persistentVolumeClaim:
+            claimName: carta-pvc
 ---
+# 5) ClusterIP Service
 apiVersion: v1
 kind: Service
 metadata:
