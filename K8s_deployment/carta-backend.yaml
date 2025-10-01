@@ -1,5 +1,3 @@
-# carta-backend.yaml
-
 # 1) Namespace
 apiVersion: v1
 kind: Namespace
@@ -10,7 +8,7 @@ metadata:
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: carta-pv
+  name: carta-pv2
   labels:
     type: local
 spec:
@@ -18,20 +16,22 @@ spec:
     storage: 10Gi
   accessModes:
     - ReadWriteOnce
+  volumeMode: Filesystem
+  storageClassName: ""                  # static PV (no dynamic provisioner)
   persistentVolumeReclaimPolicy: Retain
   hostPath:
-    path: /data/carta
+    path: /root/                  # on the Minikube NODE (not inside the container)
     type: DirectoryOrCreate
 ---
 # 3) PVC in carta namespace (binds to the static PV)
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: carta-pvc
+  name: carta-pvc2
   namespace: carta
 spec:
-  storageClassName: ""          # disables dynamic provisioning
-  volumeName: carta-pv
+  storageClassName: ""                  # must match PV's ""
+  volumeName: carta-pv2                 # bind to the PV above
   accessModes:
     - ReadWriteOnce
   resources:
@@ -47,6 +47,8 @@ metadata:
   labels:
     app: carta-backend
 spec:
+  strategy:
+    type: Recreate                      # important for RWO volumes
   replicas: 1
   revisionHistoryLimit: 2
   selector:
@@ -57,26 +59,20 @@ spec:
       labels:
         app: carta-backend
     spec:
-      securityContext:
-        runAsUser: 1000
-        runAsGroup: 1000
-        fsGroup: 1000
+     # securityContext:
+      #  runAsUser: 1000
+       # runAsGroup: 1000
+     #   fsGroup: 1000
       containers:
         - name: carta-backend
-          image: cartavis/carta:beta
+          image: "my-carta-backend:latest"
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
               containerPort: 3002
-          args:
-            - --port
-            - "3002"
-            # If your build supports it, you can later add:
-            # - --top_level_folder
-            # - /images
           volumeMounts:
             - name: carta-storage
-              mountPath: /images
+              mountPath: /root         # PVC for user data (doesn't hide samples path)
           startupProbe:
             tcpSocket: { port: 3002 }
             failureThreshold: 30
@@ -101,9 +97,9 @@ spec:
       volumes:
         - name: carta-storage
           persistentVolumeClaim:
-            claimName: carta-pvc
+            claimName: carta-pvc2
 ---
-# 5) ClusterIP Service
+# 5) NodePort Service (easy access via browser)
 apiVersion: v1
 kind: Service
 metadata:
@@ -112,10 +108,11 @@ metadata:
   labels:
     app: carta-backend
 spec:
-  type: ClusterIP
+  type: NodePort
   selector:
     app: carta-backend
   ports:
     - name: http
       port: 3002
       targetPort: 3002
+      nodePort: 30080
