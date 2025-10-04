@@ -4,40 +4,8 @@ kind: Namespace
 metadata:
   name: carta
 ---
-# 2) Static hostPath PersistentVolume (cluster-scoped)
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: carta-pv2
-  labels:
-    type: local
-spec:
-  capacity:
-    storage: 10Gi
-  accessModes:
-    - ReadWriteOnce
-  volumeMode: Filesystem
-  storageClassName: ""                  # static PV (no dynamic provisioner)
-  persistentVolumeReclaimPolicy: Retain
-  hostPath:
-    path: /root/                  # on the Minikube NODE (not inside the container)
-    type: DirectoryOrCreate
----
 # 3) PVC in carta namespace (binds to the static PV)
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: carta-pvc2
-  namespace: carta
-spec:
-  storageClassName: ""                  # must match PV's ""
-  volumeName: carta-pv2                 # bind to the PV above
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 5Gi
----
+
 # 4) Deployment in carta namespace
 apiVersion: apps/v1
 kind: Deployment
@@ -67,9 +35,9 @@ spec:
         - name: carta-backend
           image: "my-carta-backend:latest"
           imagePullPolicy: IfNotPresent
-          ports:
-            - name: http
-              containerPort: 3002
+          # ports:
+          #   - name: http
+          #     containerPort: 3002
           volumeMounts:
             - name: carta-storage
               mountPath: /root         # PVC for user data (doesn't hide samples path)
@@ -87,17 +55,18 @@ spec:
             initialDelaySeconds: 30
             periodSeconds: 10
             failureThreshold: 3
-          resources:
-            requests:
-              cpu: 250m
-              memory: 512Mi
-            limits:
-              cpu: "1"
-              memory: 2Gi
+          # resources:
+          #   requests:
+          #     cpu: 250m
+          #     memory: 512Mi
+          #   limits:
+          #     cpu: "1"
+          #     memory: 2Gi
       volumes:
         - name: carta-storage
-          persistentVolumeClaim:
-            claimName: carta-pvc2
+          hostPath:
+            path: /root             # path ON THE NODE (not inside the container)
+            type: DirectoryOrCreate
 ---
 # 5) NodePort Service (easy access via browser)
 apiVersion: v1
@@ -105,14 +74,12 @@ kind: Service
 metadata:
   name: carta-backend
   namespace: carta
-  labels:
-    app: carta-backend
 spec:
   type: NodePort
   selector:
     app: carta-backend
   ports:
-    - name: http
+    - name: tcp
       port: 3002
       targetPort: 3002
-      nodePort: 30080
+      
