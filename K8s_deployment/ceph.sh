@@ -1,10 +1,28 @@
+#!/bin/bash
+
 # Starting minikube 
+df -h /
+df -h /var
+df -i /
+
+# If you mounted the NBD anywhere, list mounts
+mount | grep nbd
+
+# If you want to free it for testing:
+sudo qemu-nbd --disconnect /dev/nbd0  || sudo nbd-client -d /dev/nbd0
+lsblk | grep nbd  # should now show it disconnected
+
+# Re-try minikube cleanly
+minikube delete --purge
 minikube start \
   -p cluster-multi \
   --driver=docker \
   --nodes=3 \
   --cpus=4 \
-  --memory=4096
+  --memory=3700 \
+  --kubernetes-version=stable \
+  --container-runtime=containerd \
+
 # install kubectl 
 curl -LO "https://dl.k8s.io/release/v1.26.1/bin/darwin/arm64/kubectl"
 chmod +x kubectl
@@ -32,6 +50,7 @@ git clone https://github.com/rook/rook.git
 cd rook/deploy/examples/
 
 kubectl create -f crds.yaml -f common.yaml -f operator.yaml -f csi-operator.yaml
+kubectl create -f cluster.yaml
 # Verify that the rook-ceph-operator is in a running state before proceeding.
 kubectl get pods -n rook-ceph
 kubectl create -f cluster-test.yaml
