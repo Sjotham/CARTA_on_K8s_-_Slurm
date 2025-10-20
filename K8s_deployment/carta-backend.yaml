@@ -4,9 +4,23 @@ kind: Namespace
 metadata:
   name: carta
 ---
-# 3) PVC in carta namespace (binds to the static PV)
-
-# 4) Deployment in carta namespace
+# 2) (CephFS) PersistentVolumeClaim in carta
+# - Uses StorageClass "rook-cephfs"
+# - RWX so multiple pods could mount if you scale later
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: carta-data
+  namespace: carta
+spec:
+  accessModes: ["ReadWriteMany"]
+  storageClassName: rook-cephfs
+  resources:
+    requests:
+      storage: 20Gi
+  volumeMode: Filesystem
+---
+# 3) Deployment (mounts the PVC instead of hostPath)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -15,10 +29,10 @@ metadata:
   labels:
     app: carta-backend
 spec:
-  strategy:
-    type: Recreate                      # important for RWO volumes
   replicas: 1
   revisionHistoryLimit: 2
+  strategy:
+    type: Recreate              # safe for single-writer paths; fine to keep with RWX
   selector:
     matchLabels:
       app: carta-backend
@@ -27,20 +41,16 @@ spec:
       labels:
         app: carta-backend
     spec:
-     # securityContext:
-      #  runAsUser: 1000
-       # runAsGroup: 1000
-     #   fsGroup: 1000
       containers:
         - name: carta-backend
-          image: "my-carta-backend:latest"
+          image: cartavis/carta:beta
           imagePullPolicy: IfNotPresent
-          # ports:
-          #   - name: http
-          #     containerPort: 3002
+          ports:
+            - name: http
+              containerPort: 3002
           volumeMounts:
             - name: carta-storage
-              mountPath: /root         # PVC for user data (doesn't hide samples path)
+              mountPath: /var/lib/carta   # better than /root; change if your app expects a different path
           startupProbe:
             tcpSocket: { port: 3002 }
             failureThreshold: 30
@@ -55,20 +65,12 @@ spec:
             initialDelaySeconds: 30
             periodSeconds: 10
             failureThreshold: 3
-          # resources:
-          #   requests:
-          #     cpu: 250m
-          #     memory: 512Mi
-          #   limits:
-          #     cpu: "1"
-          #     memory: 2Gi
       volumes:
         - name: carta-storage
-          hostPath:
-            path: /root             # path ON THE NODE (not inside the container)
-           
+          persistentVolumeClaim:
+            claimName: carta-data
 ---
-# 5) NodePort Service (easy access via browser)
+# 4) NodePort Service (external access)
 apiVersion: v1
 kind: Service
 metadata:
@@ -81,5 +83,7 @@ spec:
   ports:
     - name: tcp
       port: 3002
-      targetPort: 3002
+     # targetPort: 3002
+      #nodePort: 32002  # optional: pin a port; remove this line to let K8s choose
       
+
