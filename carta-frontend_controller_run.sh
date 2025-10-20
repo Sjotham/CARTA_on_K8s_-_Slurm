@@ -1,5 +1,7 @@
 #!/bin/bash
 set -e  # Exit if any command fails
+#https://github.com/CARTAvis/carta-frontend#
+#https://github.com/CARTAvis/carta-controller#
 
 # Clone the repositories (skip if already cloned)
 if [ ! -d "carta-frontend" ]; then
