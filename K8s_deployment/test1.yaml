@@ -1,0 +1,80 @@
+# 1) New namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: carta1
+---
+# 2) Static PV pointing at the SAME CephFS directory used by 'carta-data'
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-shared-cephfs-carta1   # <-- matches PVC.volumeName below
+spec:
+  capacity:
+    storage: 20Gi                  # hint; CephFS isn't quota-enforced by this
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: rook-cephfs
+  volumeMode: Filesystem
+  csi:
+    driver: rook.cephfs.csi.ceph.com
+    volumeHandle: shared-cephfs-carta1   # <-- unique per PV
+    volumeAttributes:
+      clusterID: rook
+      fsName: rook-cephfilesystem
+      staticVolume: "true"
+      # REPLACE with the exact rootPath from the bound PV of 'carta-data'
+      rootPath: "/volumes/csi/csi-vol-992a8ad3-9b48-47f7-82d7-69d4126248d5/8705f4a6-3e32-45f6-9aeb-6754afb0593a"
+    nodeStageSecretRef:
+      name: rook-csi-cephfs-node
+      namespace: rook
+---
+# 3) PVC in carta1 bound to the PV above
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: shared-cephfs
+  namespace: carta1
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 20Gi
+  storageClassName: rook-cephfs
+  volumeMode: Filesystem
+  volumeName: pv-shared-cephfs-carta1   # <-- must match the PV name
+---
+# 4) (optional) test Deployment mounting the shared PVC
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-backend
+  namespace: carta1
+  labels: { app: test-backend }
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app: test-backend }
+  template:
+    metadata:
+      labels: { app: test-backend }
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+      containers:
+        - name: sh
+          image: cartavis/carta:beta
+          command: ["sh","-c","sleep 1d"]
+          volumeMounts:
+            - name: data
+              mountPath: /images      # change to /var/lib/carta if you want consistency
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: shared-cephfs

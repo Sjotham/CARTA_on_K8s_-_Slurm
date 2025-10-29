@@ -17,7 +17,7 @@ spec:
   accessModes: ["ReadWriteMany"]
   storageClassName: rook-cephfs
   resources:
-    requests:
+    cartavis/carta:betarequests:
       storage: 20Gi
   volumeMode: Filesystem
 ---
@@ -44,14 +44,14 @@ spec:
     spec:
       containers:
         - name: carta-backend
-          image: cartavis/carta:beta
+          image: 
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
               containerPort: 3002
           volumeMounts:
             - name: carta-storage
-              mountPath: /var/lib/carta   # better than /root; change if your app expects a different path
+              mountPath: /images   # better than /root; change if your app expects a different path
           startupProbe:
             tcpSocket: { port: 3002 }
             failureThreshold: 30
