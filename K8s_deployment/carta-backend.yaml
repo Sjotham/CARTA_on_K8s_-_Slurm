@@ -1,13 +1,10 @@
 # 1) Namespace
-#
 apiVersion: v1
 kind: Namespace
 metadata:
   name: carta
 ---
-# 2) (CephFS) PersistentVolumeClaim in carta
-# - Uses StorageClass "rook-cephfs"
-# - RWX so multiple pods could mount if you scale later
+# 2) CephFS PVC (RWX)
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -17,11 +14,11 @@ spec:
   accessModes: ["ReadWriteMany"]
   storageClassName: rook-cephfs
   resources:
-    cartavis/carta:betarequests:
+    requests:
       storage: 20Gi
   volumeMode: Filesystem
 ---
-# 3) Deployment (mounts the PVC instead of hostPath)
+# 3) Deployment (PVC mounted at /images)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -31,9 +28,8 @@ metadata:
     app: carta-backend
 spec:
   replicas: 1
-  revisionHistoryLimit: 2
   strategy:
-    type: Recreate              # safe for single-writer paths; fine to keep with RWX
+    type: Recreate
   selector:
     matchLabels:
       app: carta-backend
@@ -42,16 +38,24 @@ spec:
       labels:
         app: carta-backend
     spec:
+      # Ensure CephFS files are owned/accessible by cartauser (1000)
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+
+      # Fix ownership/permissions on /images before the app starts
       containers:
         - name: carta-backend
-          image: 
+          image: cartavis/carta:beta
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
               containerPort: 3002
           volumeMounts:
             - name: carta-storage
-              mountPath: /images   # better than /root; change if your app expects a different path
+              mountPath: /images          # CARTA scans this by default
           startupProbe:
             tcpSocket: { port: 3002 }
             failureThreshold: 30
@@ -71,7 +75,7 @@ spec:
           persistentVolumeClaim:
             claimName: carta-data
 ---
-# 4) NodePort Service (external access)
+# 4) NodePort Service
 apiVersion: v1
 kind: Service
 metadata:
@@ -84,7 +88,6 @@ spec:
   ports:
     - name: tcp
       port: 3002
-     # targetPort: 3002
-      #nodePort: 32002  # optional: pin a port; remove this line to let K8s choose
-      
+      targetPort: 3002
+      # nodePort: 32002
 
