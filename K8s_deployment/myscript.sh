@@ -223,7 +223,15 @@ if $ROOK_STEPS; then
   log "Running 'ceph -s' inside toolbox"
   kubectl -n rook-ceph exec -it deploy/rook-ceph-tools -- bash -lc 'ceph -s || true'
   popd >/dev/null
-  log "Rook-Ceph installation step complete."
-fi
 
-log "Done."
+  # New: apply StorageClass in the same dir as this script
+  if [[ -f "${PWD}/storageclass.yaml" ]]; then
+    log "Applying storageclass.yaml from current directory"
+    kubectl create --dry-run=client -f "${PWD}/storageclass.yaml" -o yaml | kubectl apply -f -
+    kubectl get sc
+    # kubectl patch sc <your-sc-name> -p '{"metadata":{"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
+  else
+    log "storageclass.yaml not found in ${PWD}; skipping"
+  fi
+
+  log "Rook-Ceph installation step complete."
