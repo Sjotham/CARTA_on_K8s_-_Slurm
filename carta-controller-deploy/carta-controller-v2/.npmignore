@@ -1,0 +1,9 @@
+.idea/*
+.vscode/*
+node_modules/*
+src/*
+dist/*.js.map
+tsconfig.json
+carta-controller-*.tgz
+docs
+.readthedocs.yaml
