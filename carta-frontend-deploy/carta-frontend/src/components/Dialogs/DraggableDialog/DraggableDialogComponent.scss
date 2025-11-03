@@ -1,0 +1,35 @@
+@import "~@blueprintjs/core/lib/scss/variables.scss";
+
+.draggable-dialog {
+    top: 0;
+    left: 0;
+    user-select: none;
+    .#{$ns}-overlay.#{$ns}-overlay-scroll-container.#{$ns}-overlay-inline {
+        position: static;
+        height: 100%;
+        width: 100%;
+    }
+    .#{$ns}-overlay-inline .#{$ns}-overlay-content,
+    .#{$ns}-overlay-scroll-container .#{$ns}-overlay-content {
+        position: static;
+        width: 100%;
+        height: 100%;
+    }
+    .#{$ns}-dialog-container .#{$ns}-dialog {
+        position: static;
+        width: 100%;
+        height: 100%;
+        margin: 0 !important;
+    }
+    .#{$ns}-dialog-header {
+        cursor: move;
+    }
+    .#{$ns}-dialog-body {
+        height: 100%;
+        width: auto;
+        overflow: auto;
+    }
+    .#{$ns}-overlay-backdrop {
+        display: none;
+    }
+}

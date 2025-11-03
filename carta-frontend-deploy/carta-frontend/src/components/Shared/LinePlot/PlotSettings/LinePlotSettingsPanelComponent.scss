@@ -1,0 +1,51 @@
+@import "~@blueprintjs/core/lib/scss/variables.scss";
+
+.line-settings-panel {
+    width: 100%;
+    margin-top: 10px;
+
+    .#{$ns}-tab-panel {
+        height: 22em;
+        overflow: auto;
+        width: 100%;
+    }
+
+    .#{$ns}-form-group {
+        &:first-of-type {
+            margin-left: 0px;
+        }
+        .#{$ns}-label {
+            min-width: 11em;
+            text-align: right;
+
+            .line-label {
+                max-width: calc(100% - 80px);
+                text-overflow: ellipsis;
+                overflow: hidden;
+                white-space: nowrap;
+                display: inline-block;
+                vertical-align: middle;
+            }
+        }
+    }
+
+    .#{$ns}-numeric-input {
+        .#{$ns}-input-group {
+            width: 60px;
+        }
+    }
+
+    .line-boundary {
+        .#{$ns}-input-group {
+            input {
+                width: 10em;
+            }
+        }
+    }
+
+    .reset-range-content {
+        .reset-range-button {
+            width: 10em;
+        }
+    }
+}

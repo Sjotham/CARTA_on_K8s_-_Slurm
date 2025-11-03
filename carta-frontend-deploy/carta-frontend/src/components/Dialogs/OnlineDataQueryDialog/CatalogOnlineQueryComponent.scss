@@ -1,0 +1,62 @@
+@import "~@blueprintjs/core/lib/scss/variables.scss";
+
+.catalog-query-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+
+    .online-catalog-config {
+        flex: 1;
+        overflow: auto;
+
+        .#{$ns}-form-group {
+            .#{$ns}-label {
+                margin-left: 5px !important;
+            }
+            .#{$ns}-form-content {
+                display: inline-flex;
+            }
+            .#{$ns}-form-content > * {
+                margin-right: 5px;
+                margin-left: 5px;
+            }
+        }
+
+        .vizier-databse {
+            width: 93px;
+            float: left;
+        }
+
+        .vizier-key-words {
+            width: calc(100% - 93px);
+        }
+    }
+
+    .query-footer {
+        margin-top: 10px;
+
+        .result-info {
+            display: inline-flex;
+            font-size: x-small;
+        }
+
+        .#{$ns}-dialog-footer-actions {
+            float: right;
+        }
+    }
+
+    .#{$ns}-input-group .#{$ns}-input {
+        width: auto;
+    }
+}
+
+.vizier-mulit-select {
+    .#{$ns}-popover-content {
+        .#{$ns}-menu {
+            max-height: 200px;
+            overflow: auto;
+            min-width: fit-content;
+        }
+    }
+}

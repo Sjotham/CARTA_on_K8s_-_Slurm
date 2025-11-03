@@ -1,0 +1,27 @@
+@import "~@blueprintjs/core/lib/scss/variables.scss";
+
+.scatter-settings-panel {
+    width: 100%;
+
+    .#{$ns}-tab-panel {
+        height: 22em;
+        overflow: auto;
+        width: 100%;
+    }
+
+    .#{$ns}-form-group {
+        &:first-of-type {
+            margin-left: 0px;
+        }
+        .#{$ns}-label {
+            min-width: 11em;
+            text-align: right;
+        }
+    }
+
+    .#{$ns}-numeric-input {
+        .#{$ns}-input-group {
+            width: 60px;
+        }
+    }
+}

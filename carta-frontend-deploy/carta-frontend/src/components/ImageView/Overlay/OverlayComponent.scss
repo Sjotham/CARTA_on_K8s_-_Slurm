@@ -1,0 +1,7 @@
+.overlay-canvas {
+    position: absolute;
+
+    &.docked {
+        z-index: 2;
+    }
+}

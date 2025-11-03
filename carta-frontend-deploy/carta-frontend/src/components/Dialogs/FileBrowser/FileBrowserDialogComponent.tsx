@@ -1,0 +1,919 @@
+import * as React from "react";
+import {Alert, AnchorButton, Breadcrumb, BreadcrumbProps, Breadcrumbs, Button, ButtonGroup, Classes, DialogProps, Icon, InputGroup, Intent, Menu, MenuItem, Popover, Position, TabId, Tooltip} from "@blueprintjs/core";
+import {CARTA} from "carta-protobuf";
+import classNames from "classnames";
+import * as _ from "lodash";
+import {action, computed, flow, makeObservable, observable, runInAction} from "mobx";
+import {observer} from "mobx-react";
+
+import {DraggableDialogComponent, TaskProgressDialogComponent} from "components/Dialogs";
+import {FileInfoComponent, FileInfoType} from "components/FileInfo/FileInfoComponent";
+import {AppToaster, ErrorToast, SimpleTableComponentProps} from "components/Shared";
+import {ImageType} from "models";
+import {AppStore, BrowserMode, CatalogProfileStore, DialogId, FileBrowserStore, FileFilteringType, HelpType, ISelectedFile, PreferenceKeys, PreferenceStore} from "stores";
+import {FrameStore} from "stores/Frame";
+
+import {FileListTableComponent} from "./FileListTable/FileListTableComponent";
+
+import "./FileBrowserDialogComponent.scss";
+
+@observer
+export class FileBrowserDialogComponent extends React.Component {
+    @observable overwriteExistingFileAlertVisible: boolean;
+    @observable fileFilterString: string = "";
+    @observable debouncedFilterString: string = "";
+    @observable enableImageArithmetic: boolean = false;
+    @observable imageArithmeticString: string = "";
+    @observable inputPathString: string = "";
+    @observable enableEditPath: boolean = false;
+    private readonly imageArithmeticInputRef: React.RefObject<HTMLInputElement>;
+
+    private static readonly DefaultWidth = 1200;
+    private static readonly DefaultHeight = 600;
+    private static readonly MinWidth = 800;
+    private static readonly MinHeight = 400;
+
+    constructor(props: any) {
+        super(props);
+        makeObservable(this);
+        this.imageArithmeticInputRef = React.createRef<HTMLInputElement>();
+    }
+
+    private handleTabChange = (newId: TabId) => {
+        FileBrowserStore.Instance.setSelectedTab(newId);
+    };
+
+    @action private handleFileClicked = (file: ISelectedFile) => {
+        FileBrowserStore.Instance.selectFile(file);
+        if (this.enableImageArithmetic) {
+            // Check if the existing string has a trailing quote or not
+            const quoteRegex = /(["'])+/gm;
+            const quoteCount = this.imageArithmeticString.match(quoteRegex)?.length;
+            const trailingQuote = quoteCount % 2 !== 0;
+
+            const operatorRegex = /([+\-*/(,])\s*$/gm;
+            const trailingOperator = this.imageArithmeticString.match(operatorRegex)?.length > 0;
+
+            // Append the file name if there's a trailing operator or quote, otherwise just replace
+            if (trailingOperator) {
+                this.imageArithmeticString += `"${file.fileInfo.name}"`;
+            } else if (this.imageArithmeticString?.endsWith('"') && trailingQuote) {
+                this.imageArithmeticString += `${file.fileInfo.name}"`;
+            } else if (this.imageArithmeticString?.endsWith("'") && trailingQuote) {
+                this.imageArithmeticString += `${file.fileInfo.name}'`;
+            } else {
+                this.imageArithmeticString = `"${file.fileInfo.name}"`;
+            }
+            this.imageArithmeticInputRef.current?.focus();
+        }
+    };
+
+    private loadWithColorBlending = async () => {
+        try {
+            await this.loadSelectedFiles();
+
+            const appStore = AppStore.Instance;
+            appStore.frames.forEach(f => appStore.setSpatialMatchingEnabled(f, true));
+            appStore.frames.forEach(f => appStore.setRasterScalingMatchingEnabled(f, false));
+            appStore.frames.forEach(f => f.renderConfig.setPercentileRank(appStore.preferenceStore.percentile));
+            const colorBlendingStore = appStore.imageViewConfigStore.createColorBlending();
+
+            colorBlendingStore.applyColormapSet(appStore.fileBrowserStore.selectedFiles?.length <= 3 ? "RGB" : "Rainbow");
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    private loadSelectedFiles = async () => {
+        const appStore = AppStore.Instance;
+        const {fileBrowserStore, layoutStore, dynamicLayoutStore} = appStore;
+
+        if (PreferenceStore.Instance.dynamicLayoutEnable && dynamicLayoutStore.dynamicLayoutName && layoutStore.layoutExists(dynamicLayoutStore.dynamicLayoutName)) {
+            await layoutStore.applyLayout(dynamicLayoutStore.dynamicLayoutName);
+        }
+
+        if (fileBrowserStore.selectedFiles.length > 1) {
+            appStore.setLoadingMultipleFiles(true);
+            for (let i = 0; i < fileBrowserStore.selectedFiles.length; i++) {
+                try {
+                    await this.loadFile(fileBrowserStore.selectedFiles[i], i > 0);
+                } catch (err) {
+                    console.log(err);
+                }
+            }
+            appStore.setLoadingMultipleFiles(false);
+        } else {
+            await this.loadFile({fileInfo: fileBrowserStore.selectedFile, hdu: fileBrowserStore.selectedHDU});
+        }
+    };
+
+    @flow.bound private *loadExpression() {
+        const appStore = AppStore.Instance;
+        const frames = appStore.frames;
+        const fileBrowserStore = appStore.fileBrowserStore;
+        let frame: FrameStore;
+
+        if (!fileBrowserStore.appendingFrame || !frames.length) {
+            frame = yield appStore.openFile(fileBrowserStore.fileList.directory, this.imageArithmeticString, "", true);
+        } else {
+            frame = yield appStore.appendFile(fileBrowserStore.fileList.directory, this.imageArithmeticString, "", true);
+        }
+        fileBrowserStore.saveStartingDirectory();
+        this.clearArithmeticString();
+        this.setEnableImageArithmetic(false);
+        return frame;
+    }
+
+    @flow.bound private *loadComplexImage(filename: string, expression: string) {
+        const imageArithmeticString = `${expression}("${filename}")`;
+        const appStore = AppStore.Instance;
+        const frames = appStore.frames;
+        const fileBrowserStore = appStore.fileBrowserStore;
+        let frame: FrameStore;
+
+        if (!fileBrowserStore.appendingFrame || !frames.length) {
+            frame = yield appStore.openFile(fileBrowserStore.fileList.directory, imageArithmeticString, "", true);
+        } else {
+            frame = yield appStore.appendFile(fileBrowserStore.fileList.directory, imageArithmeticString, "", true);
+        }
+        fileBrowserStore.saveStartingDirectory();
+        return frame;
+    }
+
+    @flow.bound private *loadFile(file: ISelectedFile, forceAppend: boolean = false) {
+        const appStore = AppStore.Instance;
+        const fileBrowserStore = appStore.fileBrowserStore;
+        let frame: FrameStore;
+
+        // Ignore load
+        switch (fileBrowserStore.browserMode) {
+            case BrowserMode.RegionExport:
+            case BrowserMode.SaveFile:
+                return undefined;
+            default:
+                break;
+        }
+
+        if (fileBrowserStore.browserMode === BrowserMode.File) {
+            const frames = appStore.frames;
+            if (!(forceAppend || fileBrowserStore.appendingFrame) || !frames.length) {
+                frame = yield appStore.openFile(fileBrowserStore.fileList.directory, file.fileInfo.name, file.hdu);
+            } else {
+                frame = yield appStore.appendFile(fileBrowserStore.fileList.directory, file.fileInfo.name, file.hdu);
+            }
+        } else if (fileBrowserStore.browserMode === BrowserMode.Catalog) {
+            yield appStore.appendCatalog(fileBrowserStore.catalogFileList.directory, file.fileInfo.name, CatalogProfileStore.InitTableRows, CARTA.CatalogFileType.VOTable);
+        } else {
+            fileBrowserStore.setImportingRegions(true);
+            fileBrowserStore.showLoadingDialog();
+            yield appStore.importRegion(fileBrowserStore.fileList.directory, file.fileInfo.name, file.fileInfo.type);
+            fileBrowserStore.resetLoadingStates();
+        }
+
+        fileBrowserStore.saveStartingDirectory();
+        return frame;
+    }
+
+    /// Prepare parameters for send saveFile
+    private handleSaveFile = async (overwrite: boolean = false) => {
+        const appStore = AppStore.Instance;
+        const fileBrowserStore = FileBrowserStore.Instance;
+        const activeFrame = appStore.activeFrame;
+        const filename = fileBrowserStore.saveFilename.trim();
+
+        const channelStart = fileBrowserStore.saveSpectralStart ? activeFrame.findChannelIndexByValue(fileBrowserStore.saveSpectralStart) : 0;
+        const channelEnd = fileBrowserStore.saveSpectralEnd ? activeFrame.findChannelIndexByValue(fileBrowserStore.saveSpectralEnd) : activeFrame.numChannels - 1;
+
+        const saveChannelStart = Math.min(channelStart, channelEnd);
+        const saveChannelEnd = Math.max(channelStart, channelEnd);
+        let saveChannels = [];
+        if (activeFrame.numChannels > 1) {
+            saveChannels = [Math.max(saveChannelStart, 0), Math.min(saveChannelEnd, activeFrame.numChannels - 1), fileBrowserStore.saveSpectralStride];
+        }
+        const saveStokes = fileBrowserStore.saveStokesRange;
+
+        const restFreq = activeFrame.headerRestFreq === fileBrowserStore.saveRestFreqInHz ? NaN : fileBrowserStore.saveRestFreqInHz;
+        await appStore.saveFile(fileBrowserStore.fileList.directory, filename, fileBrowserStore.saveFileType, fileBrowserStore.saveRegionId, saveChannels, saveStokes, fileBrowserStore.shouldDropDegenerateAxes, restFreq, overwrite);
+    };
+
+    private handleSaveFileClicked = async () => {
+        try {
+            await this.handleSaveFile();
+        } catch (err) {
+            if (err.overwriteConfirmationRequired) {
+                this.overwriteExistingFileAlertVisible = true;
+            } else {
+                console.error(err.message);
+                AppToaster.show({icon: "warning-sign", message: err.message, intent: "danger", timeout: 3000});
+            }
+        }
+    };
+
+    private handleSaveFileNameChanged = (ev: React.ChangeEvent<HTMLInputElement>) => {
+        const fileBrowserStore = FileBrowserStore.Instance;
+        fileBrowserStore.setSaveFilename(ev.target.value);
+    };
+
+    private handleExportRegionsClicked = async () => {
+        try {
+            const fileBrowserStore = FileBrowserStore.Instance;
+            const filename = fileBrowserStore.exportFilename.trim();
+            await this.exportRegion(fileBrowserStore.fileList.directory, filename);
+        } catch (err) {
+            if (err.overwriteConfirmationRequired) {
+                this.overwriteExistingFileAlertVisible = true;
+            } else {
+                console.error(err.message);
+                AppToaster.show(ErrorToast(err.message));
+            }
+        }
+    };
+
+    private exportRegion = async (directory: string, filename: string, overwrite: boolean = false) => {
+        if (!filename) {
+            return;
+        }
+
+        filename = filename.trim();
+        const appStore = AppStore.Instance;
+        const fileBrowserStore = FileBrowserStore.Instance;
+        console.log(`Exporting regions to ${directory}/${filename}`);
+        await appStore.exportRegions(directory, filename, fileBrowserStore.exportCoordinateType, fileBrowserStore.exportFileType, fileBrowserStore.exportRegionIndexes, overwrite);
+    };
+
+    private handleOverwriteAlertConfirmed = async () => {
+        this.overwriteExistingFileAlertVisible = false;
+        const fileBrowserStore = FileBrowserStore.Instance;
+        if (fileBrowserStore.browserMode === BrowserMode.RegionExport) {
+            try {
+                const filename = fileBrowserStore.exportFilename.trim();
+                await this.exportRegion(fileBrowserStore.fileList.directory, filename, true);
+            } catch (err) {
+                console.error(err.message);
+                AppToaster.show(ErrorToast(err.message));
+            }
+        } else if (fileBrowserStore.browserMode === BrowserMode.SaveFile) {
+            try {
+                await this.handleSaveFile(true);
+            } catch (err) {
+                console.error(err.message);
+                AppToaster.show({icon: "warning-sign", message: err.message, intent: "danger", timeout: 3000});
+            }
+        }
+    };
+
+    private handleOverwriteAlertDismissed = () => {
+        this.overwriteExistingFileAlertVisible = false;
+    };
+
+    private handleExportInputChanged = (ev: React.ChangeEvent<HTMLInputElement>) => {
+        const fileBrowserStore = FileBrowserStore.Instance;
+        fileBrowserStore.setExportFilename(ev.target.value);
+    };
+
+    private handleFileListRequestCancelled = () => {
+        const fileBrowserStore = FileBrowserStore.Instance;
+        fileBrowserStore.cancelRequestingFileList();
+        fileBrowserStore.resetLoadingStates();
+    };
+
+    @action handleFilterStringInputChanged = (ev: React.ChangeEvent<HTMLInputElement>) => {
+        this.fileFilterString = ev.target.value;
+        this.setFilterString(this.fileFilterString);
+    };
+
+    @action handleImageArithmeticStringChanged = (ev: React.ChangeEvent<HTMLInputElement>) => {
+        this.imageArithmeticString = ev.target.value;
+    };
+
+    setFilterString = _.debounce(
+        (filterString: string) =>
+            runInAction(() => {
+                this.debouncedFilterString = filterString;
+            }),
+        500
+    );
+
+    @action clearFilterString = () => {
+        this.fileFilterString = "";
+        this.debouncedFilterString = "";
+    };
+
+    @action clearArithmeticString = () => {
+        this.imageArithmeticString = "";
+    };
+
+    @action handleFolderClicked = (folderName: string) => {
+        this.clearFilterString();
+        AppStore.Instance.fileBrowserStore.selectFolder(folderName);
+    };
+
+    @action handleBreadcrumbClicked = (path: string) => {
+        this.clearFilterString();
+        AppStore.Instance.fileBrowserStore.selectFolder(path, true);
+    };
+
+    private static ValidateFilename(filename: string) {
+        const forbiddenRegex = /(\.\.)|(\\)+/gm;
+        return filename && filename.length && !filename.match(forbiddenRegex);
+    }
+
+    private renderActionButton(browserMode: BrowserMode, appending: boolean) {
+        const appStore = AppStore.Instance;
+        const fileBrowserStore = appStore.fileBrowserStore;
+
+        switch (browserMode) {
+            case BrowserMode.File:
+                let actionDisabled: boolean;
+                let actionFunction: () => void;
+                if (this.enableImageArithmetic) {
+                    actionDisabled = appStore.fileLoading || !this.imageArithmeticString;
+                    actionFunction = this.loadExpression;
+                } else {
+                    const folderSelected = fileBrowserStore.selectedFiles && !fileBrowserStore.selectedFiles.every(file => file.isFile);
+                    actionDisabled = appStore.fileLoading || !fileBrowserStore.selectedFile || !fileBrowserStore.fileInfoResp || fileBrowserStore.loadingInfo || folderSelected;
+                    actionFunction = this.loadSelectedFiles;
+                }
+                if (appending) {
+                    let actionText: string;
+                    if (this.enableImageArithmetic) {
+                        actionText = "Append expression";
+                    } else if (fileBrowserStore.selectedFiles?.length > 1) {
+                        actionText = "Append selected";
+                    } else {
+                        actionText = "Append";
+                    }
+
+                    if (fileBrowserStore.isComplexImage && fileBrowserStore.selectedFiles?.length === 1) {
+                        const loadMenuItems = (
+                            <Menu>
+                                <MenuItem text="Amplitude" intent={Intent.PRIMARY} disabled={actionDisabled} onClick={() => this.loadComplexImage(fileBrowserStore.selectedFile.name, "AMPLITUDE")} />
+                                <MenuItem text="Phase" intent={Intent.PRIMARY} disabled={actionDisabled} onClick={() => this.loadComplexImage(fileBrowserStore.selectedFile.name, "PHASE")} />
+                                <MenuItem text="Real" intent={Intent.PRIMARY} disabled={actionDisabled} onClick={() => this.loadComplexImage(fileBrowserStore.selectedFile.name, "REAL")} />
+                                <MenuItem text="Imaginary" intent={Intent.PRIMARY} disabled={actionDisabled} onClick={() => this.loadComplexImage(fileBrowserStore.selectedFile.name, "IMAG")} />
+                            </Menu>
+                        );
+                        return (
+                            <div>
+                                <Popover content={loadMenuItems} placement="right-end">
+                                    <AnchorButton intent={Intent.PRIMARY} disabled={actionDisabled} text="Append as" />
+                                </Popover>
+                            </div>
+                        );
+                    } else {
+                        return (
+                            <div>
+                                <Tooltip content={"Append this image while keeping other images open"}>
+                                    <AnchorButton intent={Intent.PRIMARY} disabled={actionDisabled} onClick={actionFunction} text={actionText} />
+                                </Tooltip>
+                                {!this.enableImageArithmetic && fileBrowserStore.selectedFiles?.length > 1 && fileBrowserStore.selectedFiles?.length < 5 && (
+                                    <Tooltip content={"Append this image while keeping other images open"}>
+                                        <AnchorButton intent={Intent.PRIMARY} disabled={actionDisabled} onClick={() => appStore.dialogStore.showDialog(DialogId.Stokes)} text={"Load as hypercube"} />
+                                    </Tooltip>
+                                )}
+                            </div>
+                        );
+                    }
+                } else {
+                    let actionText: string;
+                    if (this.enableImageArithmetic) {
+                        actionText = "Load expression";
+                    } else if (fileBrowserStore.selectedFiles?.length > 1) {
+                        actionText = "Load selected";
+                    } else {
+                        actionText = "Load";
+                    }
+                    if (fileBrowserStore.isComplexImage && fileBrowserStore.selectedFiles?.length === 1) {
+                        const loadMenuItems = (
+                            <Menu>
+                                <MenuItem text="Amplitude" intent={Intent.PRIMARY} disabled={actionDisabled} onClick={() => this.loadComplexImage(fileBrowserStore.selectedFile.name, "AMPLITUDE")} />
+                                <MenuItem text="Phase" intent={Intent.PRIMARY} disabled={actionDisabled} onClick={() => this.loadComplexImage(fileBrowserStore.selectedFile.name, "PHASE")} />
+                                <MenuItem text="Real" intent={Intent.PRIMARY} disabled={actionDisabled} onClick={() => this.loadComplexImage(fileBrowserStore.selectedFile.name, "REAL")} />
+                                <MenuItem text="Imaginary" intent={Intent.PRIMARY} disabled={actionDisabled} onClick={() => this.loadComplexImage(fileBrowserStore.selectedFile.name, "IMAG")} />
+                            </Menu>
+                        );
+
+                        return (
+                            <div>
+                                <Popover content={loadMenuItems} placement="right-end">
+                                    <AnchorButton intent={Intent.PRIMARY} disabled={actionDisabled} text="Load as" />
+                                </Popover>
+                            </div>
+                        );
+                    } else {
+                        return (
+                            <div>
+                                <Tooltip content={"Close any existing images and load this image"}>
+                                    <AnchorButton intent={Intent.PRIMARY} disabled={actionDisabled} onClick={actionFunction} text={actionText} />
+                                </Tooltip>
+                                {!this.enableImageArithmetic && fileBrowserStore.selectedFiles?.length > 1 && fileBrowserStore.selectedFiles?.length < 5 && (
+                                    <Tooltip content={"Close any existing images and load this image"}>
+                                        <AnchorButton intent={Intent.PRIMARY} disabled={actionDisabled} onClick={() => appStore.dialogStore.showDialog(DialogId.Stokes)} text={"Load as hypercube"} />
+                                    </Tooltip>
+                                )}
+                                {fileBrowserStore.selectedFiles?.length > 1 && (
+                                    <Tooltip content={"Close any existing images and load the images"}>
+                                        <AnchorButton
+                                            intent={Intent.PRIMARY}
+                                            disabled={actionDisabled}
+                                            onClick={this.loadWithColorBlending}
+                                            text={fileBrowserStore.selectedFiles?.length <= 3 ? "Load with RGB blending" : "Load with multi-color blending"}
+                                        />
+                                    </Tooltip>
+                                )}
+                            </div>
+                        );
+                    }
+                }
+            case BrowserMode.SaveFile:
+                return (
+                    <Tooltip
+                        content={
+                            appStore.activeImage?.type !== ImageType.FRAME ? (
+                                <span>
+                                    Color-blending and PV preview images cannot be saved.
+                                    <br />
+                                    <small>To save color-blending images, please save as a workspace via the File menu.</small>
+                                </span>
+                            ) : (
+                                "Save this file"
+                            )
+                        }
+                    >
+                        <AnchorButton
+                            intent={Intent.PRIMARY}
+                            disabled={appStore.fileLoading || fileBrowserStore.loadingInfo || appStore.fileSaving || appStore.activeImage?.type !== ImageType.FRAME || fileBrowserStore.saveFilename.length === 0}
+                            onClick={this.handleSaveFileClicked}
+                            text="Save"
+                        />
+                    </Tooltip>
+                );
+            case BrowserMode.RegionImport:
+                return (
+                    <Tooltip content={"Load a region file for the currently active image"}>
+                        <AnchorButton
+                            intent={Intent.PRIMARY}
+                            disabled={appStore.fileLoading || !fileBrowserStore.selectedFile || !fileBrowserStore.fileInfoResp || fileBrowserStore.loadingInfo}
+                            onClick={this.loadSelectedFiles}
+                            text="Load region"
+                        />
+                    </Tooltip>
+                );
+            case BrowserMode.Catalog:
+                return (
+                    <Tooltip content={"Load a catalog file for the currently active image"}>
+                        <AnchorButton
+                            intent={Intent.PRIMARY}
+                            disabled={appStore.fileLoading || !fileBrowserStore.selectedFile || !fileBrowserStore.fileInfoResp || fileBrowserStore.loadingInfo || !appStore.activeFrame}
+                            onClick={this.loadSelectedFiles}
+                            text="Load catalog"
+                        />
+                    </Tooltip>
+                );
+            case BrowserMode.RegionExport:
+                const frame = appStore.activeFrame;
+                return (
+                    <Tooltip content={"Export regions for the currently active image"}>
+                        <AnchorButton
+                            intent={Intent.PRIMARY}
+                            disabled={!FileBrowserDialogComponent.ValidateFilename(fileBrowserStore.exportFilename) || !frame || frame.regionSet.regions.length <= 1 || fileBrowserStore.exportRegionNum < 1}
+                            onClick={this.handleExportRegionsClicked}
+                            text="Export regions"
+                        />
+                    </Tooltip>
+                );
+            default:
+                return "";
+        }
+    }
+
+    private renderExportFilenameInput() {
+        const fileBrowserStore = FileBrowserStore.Instance;
+
+        const coordinateTypeMenu = (
+            <Popover
+                minimal={true}
+                content={
+                    <Menu>
+                        <MenuItem text="World coordinates" onClick={() => fileBrowserStore.setExportCoordinateType(CARTA.CoordinateType.WORLD)} />
+                        <MenuItem text="Pixel coordinates" onClick={() => fileBrowserStore.setExportCoordinateType(CARTA.CoordinateType.PIXEL)} />
+                    </Menu>
+                }
+                position={Position.BOTTOM_RIGHT}
+            >
+                <Button minimal={true} rightIcon="caret-down">
+                    {fileBrowserStore.exportCoordinateType === CARTA.CoordinateType.WORLD ? "World" : "Pixel"}
+                </Button>
+            </Popover>
+        );
+
+        const fileTypeMenu = (
+            <Popover
+                minimal={true}
+                content={
+                    <Menu>
+                        <MenuItem text="CRTF region file" onClick={() => fileBrowserStore.setExportFileType(CARTA.FileType.CRTF)} />
+                        <MenuItem text="DS9 region file" onClick={() => fileBrowserStore.setExportFileType(CARTA.FileType.DS9_REG)} />
+                    </Menu>
+                }
+                position={Position.BOTTOM_RIGHT}
+            >
+                <Button minimal={true} rightIcon="caret-down" data-testid="export-region-file-type-dropdown">
+                    {fileBrowserStore.exportFileType === CARTA.FileType.CRTF ? "CRTF" : "DS9"}
+                </Button>
+            </Popover>
+        );
+
+        let sideMenu = (
+            <div>
+                {fileTypeMenu}
+                {coordinateTypeMenu}
+            </div>
+        );
+        return <InputGroup autoFocus={true} placeholder="Enter file name" value={fileBrowserStore.exportFilename} onChange={this.handleExportInputChanged} rightElement={sideMenu} />;
+    }
+
+    private renderSaveFilenameInput() {
+        const fileBrowserStore = FileBrowserStore.Instance;
+
+        const fileTypeMenu = (
+            <Popover
+                minimal={true}
+                content={
+                    <Menu>
+                        <MenuItem text="CASA" onClick={() => fileBrowserStore.setSaveFileType(CARTA.FileType.CASA)} />
+                        <MenuItem text="FITS" onClick={() => fileBrowserStore.setSaveFileType(CARTA.FileType.FITS)} />
+                    </Menu>
+                }
+                position={Position.BOTTOM_RIGHT}
+            >
+                <Button minimal={true} rightIcon="caret-down">
+                    {fileBrowserStore.saveFileType === CARTA.FileType.CASA ? "CASA" : "FITS"}
+                </Button>
+            </Popover>
+        );
+
+        return <InputGroup autoFocus={true} placeholder="Enter file name" value={fileBrowserStore.saveFilename} onChange={this.handleSaveFileNameChanged} rightElement={fileTypeMenu} />;
+    }
+
+    private renderOpenFilenameInput(browserMode: BrowserMode) {
+        const preferenceStore = PreferenceStore.Instance;
+
+        let filterName: string;
+        let filterDescription: string;
+
+        switch (preferenceStore.fileFilteringType) {
+            case FileFilteringType.Fuzzy:
+                filterName = "Fuzzy search";
+                filterDescription = "Filter by filename with fuzzy search";
+                break;
+            case FileFilteringType.Unix:
+                filterName = "Unix pattern";
+                filterDescription = "Filter by filename using unix-style pattern";
+                break;
+            case FileFilteringType.Regex:
+                filterName = "Regular expression";
+                filterDescription = "Filter by filename using regular expression";
+                break;
+            default:
+                break;
+        }
+
+        const filterTypeMenu = (
+            <Popover
+                minimal={true}
+                content={
+                    <Menu>
+                        <MenuItem text="Fuzzy search" onClick={() => this.setFilterType(FileFilteringType.Fuzzy)} />
+                        <MenuItem text="Unix pattern" onClick={() => this.setFilterType(FileFilteringType.Unix)} />
+                        <MenuItem text="Regular expression" onClick={() => this.setFilterType(FileFilteringType.Regex)} />
+                    </Menu>
+                }
+                placement="bottom-end"
+            >
+                <Button minimal={true} icon="filter" rightIcon="caret-down">
+                    {filterName}
+                </Button>
+            </Popover>
+        );
+
+        if (browserMode === BrowserMode.File) {
+            const inputTypeMenu = (
+                <Popover
+                    minimal={true}
+                    content={
+                        <Menu>
+                            <MenuItem text="List filtering" onClick={() => this.setEnableImageArithmetic(false)} />
+                            <MenuItem text="Image arithmetic" onClick={() => this.setEnableImageArithmetic(true)} />
+                        </Menu>
+                    }
+                    placement="bottom-start"
+                >
+                    <Button minimal={true} icon={this.enableImageArithmetic ? "calculator" : "search"} rightIcon="caret-down">
+                        {this.enableImageArithmetic ? "Image arithmetic" : "Filter"}
+                    </Button>
+                </Popover>
+            );
+            if (this.enableImageArithmetic) {
+                return (
+                    <InputGroup
+                        className="arithmetic-input"
+                        inputRef={this.imageArithmeticInputRef}
+                        autoFocus={true}
+                        placeholder="Enter an image arithmetic expression"
+                        value={this.imageArithmeticString}
+                        onChange={this.handleImageArithmeticStringChanged}
+                        leftElement={inputTypeMenu}
+                        onKeyDown={this.handleImageArithmeticKeyDown}
+                    />
+                );
+            } else {
+                return <InputGroup autoFocus={false} placeholder={filterDescription} value={this.fileFilterString} onChange={this.handleFilterStringInputChanged} leftElement={inputTypeMenu} rightElement={filterTypeMenu} />;
+            }
+        } else {
+            return <InputGroup autoFocus={false} placeholder={filterDescription} value={this.fileFilterString} onChange={this.handleFilterStringInputChanged} leftIcon="search" rightElement={filterTypeMenu} />;
+        }
+    }
+
+    @action setFilterType = (type: FileFilteringType) => {
+        this.clearFilterString();
+        PreferenceStore.Instance.setPreference(PreferenceKeys.SILENT_FILE_FILTERING_TYPE, type);
+    };
+
+    @action setEnableImageArithmetic = (val: boolean) => {
+        this.enableImageArithmetic = val;
+        if (val) {
+            this.clearFilterString();
+        }
+    };
+
+    private handleImageArithmeticKeyDown = (ev: React.KeyboardEvent<HTMLInputElement>) => {
+        if (ev.key === "Enter") {
+            this.loadExpression();
+        }
+    };
+
+    // Refresh file list to trigger the Breadcrumb re-rendering
+    @action refreshFileList = () => {
+        this.clearFilterString();
+        const fileBrowserStore = FileBrowserStore.Instance;
+        switch (fileBrowserStore.browserMode) {
+            case BrowserMode.Catalog:
+                fileBrowserStore.catalogFileList = {...fileBrowserStore.catalogFileList};
+                break;
+            default:
+                fileBrowserStore.fileList = {...fileBrowserStore.fileList};
+                break;
+        }
+    };
+
+    public render() {
+        const appStore = AppStore.Instance;
+        const fileBrowserStore = appStore.fileBrowserStore;
+        const className = classNames("file-browser-dialog", {[Classes.DARK]: appStore.darkTheme});
+
+        const dialogProps: DialogProps = {
+            icon: "folder-open",
+            className: className,
+            backdropClassName: "minimal-dialog-backdrop",
+            canOutsideClickClose: false,
+            lazy: true,
+            isOpen: appStore.dialogStore.dialogVisible.get(DialogId.FileBrowser),
+            onClose: this.closeFileBrowser,
+            onOpened: this.refreshFileList,
+            title: "File Browser"
+        };
+
+        const actionButton = this.renderActionButton(fileBrowserStore.browserMode, fileBrowserStore.appendingFrame);
+
+        let fileInput: React.ReactNode;
+        let paneClassName = "file-panes";
+
+        if (fileBrowserStore.browserMode === BrowserMode.SaveFile) {
+            fileInput = this.renderSaveFilenameInput();
+        } else if (fileBrowserStore.browserMode === BrowserMode.RegionExport) {
+            fileInput = this.renderExportFilenameInput();
+        } else {
+            fileInput = this.renderOpenFilenameInput(fileBrowserStore.browserMode);
+        }
+
+        let tableProps: SimpleTableComponentProps = null;
+        if (fileBrowserStore.browserMode === BrowserMode.Catalog && fileBrowserStore.catalogHeaders && fileBrowserStore.catalogHeaders.length) {
+            const table = fileBrowserStore.catalogHeaderDataset;
+            tableProps = {
+                dataset: table.columnsData,
+                columnHeaders: table.columnHeaders,
+                numVisibleRows: fileBrowserStore.catalogHeaders.length
+            };
+        }
+
+        let fileProgress;
+
+        if (fileBrowserStore.loadingProgress) {
+            fileProgress = {
+                total: fileBrowserStore.loadingTotalCount,
+                checked: fileBrowserStore.loadingCheckedCount
+            };
+        }
+
+        const fileList = fileBrowserStore.getfileListByMode;
+
+        return (
+            <DraggableDialogComponent
+                dialogProps={dialogProps}
+                helpType={HelpType.FILE_BROWSER}
+                minWidth={FileBrowserDialogComponent.MinWidth}
+                minHeight={FileBrowserDialogComponent.MinHeight}
+                defaultWidth={FileBrowserDialogComponent.DefaultWidth}
+                defaultHeight={FileBrowserDialogComponent.DefaultHeight}
+                enableResizing={true}
+                dialogId={DialogId.FileBrowser}
+            >
+                <div className="file-path">
+                    {this.pathItems && (
+                        <React.Fragment>
+                            <ButtonGroup>
+                                <Tooltip content={"Refresh current directory"}>
+                                    <AnchorButton icon="repeat" onClick={() => fileBrowserStore.selectFolder(fileList.directory, true)} minimal={true} />
+                                </Tooltip>
+                                <Tooltip content={"Input directory path"} disabled={this.enableEditPath}>
+                                    <AnchorButton className="edit-path-button" icon="edit" minimal={true} onClick={this.switchEditPathMode} />
+                                </Tooltip>
+                            </ButtonGroup>
+                            {this.enableEditPath ? (
+                                <InputGroup
+                                    className="directory-path-input"
+                                    autoFocus={true}
+                                    placeholder={"Input directory path with respect to the top level folder"}
+                                    onChange={this.handleInputPathChanged}
+                                    onKeyDown={ev => this.submitInputPath(ev)}
+                                    defaultValue={"/" + fileBrowserStore.getfileListByMode.directory}
+                                />
+                            ) : (
+                                <Breadcrumbs className="path-breadcrumbs" breadcrumbRenderer={this.renderBreadcrumb} items={this.pathItems} />
+                            )}
+                        </React.Fragment>
+                    )}
+                </div>
+                <div className={Classes.DIALOG_BODY}>
+                    <div className={paneClassName}>
+                        <div className="file-list" data-testid="file-list">
+                            <FileListTableComponent
+                                darkTheme={appStore.darkTheme}
+                                loading={fileBrowserStore.loadingList}
+                                extendedLoading={fileBrowserStore.extendedLoading}
+                                fileProgress={fileProgress}
+                                fileList={fileBrowserStore.getfileListByMode}
+                                fileBrowserMode={fileBrowserStore.browserMode}
+                                selectedFile={fileBrowserStore.selectedFile}
+                                selectedHDU={fileBrowserStore.selectedHDU}
+                                filterString={this.debouncedFilterString}
+                                filterType={appStore.preferenceStore.fileFilteringType}
+                                sortingString={appStore.preferenceStore.fileSortingString}
+                                onSortingChanged={fileBrowserStore.setSortingConfig}
+                                onFileClicked={this.handleFileClicked}
+                                onSelectionChanged={fileBrowserStore.setSelectedFiles}
+                                onFileDoubleClicked={this.loadSelectedFiles}
+                                onFolderClicked={this.handleFolderClicked}
+                                onListCancelled={this.handleFileListRequestCancelled}
+                            />
+                        </div>
+                        <div className="file-info-pane">
+                            <FileInfoComponent
+                                infoTypes={FileBrowserDialogComponent.GetFileInfoTypes(fileBrowserStore.browserMode)}
+                                HDUOptions={{HDUList: fileBrowserStore.HDUList, handleSelectedHDUChange: fileBrowserStore.selectHDU}}
+                                fileInfoExtended={fileBrowserStore.fileInfoExtended}
+                                regionFileInfo={fileBrowserStore.regionFileInfo ? fileBrowserStore.regionFileInfo.join("\n") : ""}
+                                catalogFileInfo={fileBrowserStore.catalogFileInfo}
+                                selectedTab={fileBrowserStore.selectedTab as FileInfoType}
+                                handleTabChange={this.handleTabChange}
+                                isLoading={fileBrowserStore.loadingInfo}
+                                errorMessage={fileBrowserStore.responseErrorMessage}
+                                catalogHeaderTable={tableProps}
+                                selectedFile={fileBrowserStore.selectedFile}
+                            />
+                        </div>
+                    </div>
+                    {fileInput}
+                </div>
+                <div className={Classes.DIALOG_FOOTER}>
+                    <div className={Classes.DIALOG_FOOTER_ACTIONS}>{actionButton}</div>
+                </div>
+                <Alert
+                    className={classNames({[Classes.DARK]: appStore.darkTheme})}
+                    isOpen={this.overwriteExistingFileAlertVisible}
+                    confirmButtonText="Yes"
+                    cancelButtonText="Cancel"
+                    intent={Intent.DANGER}
+                    onConfirm={this.handleOverwriteAlertConfirmed}
+                    onCancel={this.handleOverwriteAlertDismissed}
+                    canEscapeKeyCancel={true}
+                >
+                    This file exists. Are you sure to overwrite it?
+                </Alert>
+                <TaskProgressDialogComponent
+                    isOpen={fileBrowserStore.isImportingRegions && fileBrowserStore.isLoadingDialogOpen && fileBrowserStore.loadingProgress < 1}
+                    progress={fileBrowserStore.loadingProgress}
+                    timeRemaining={appStore.estimatedTaskRemainingTime}
+                    cancellable={false}
+                    text={"Importing regions"}
+                    contentText={`loading ${fileBrowserStore.loadingCheckedCount} / ${fileBrowserStore.loadingTotalCount}`}
+                />
+            </DraggableDialogComponent>
+        );
+    }
+
+    private closeFileBrowser = () => {
+        const appStore = AppStore.Instance;
+        const fileBrowserStore = appStore.fileBrowserStore;
+        if (appStore.dialogStore.dialogVisible.get(DialogId.Stokes)) {
+            appStore.dialogStore.hideDialog(DialogId.Stokes);
+        }
+        fileBrowserStore.hideFileBrowser();
+    };
+
+    private renderBreadcrumb = (props: BreadcrumbProps) => {
+        return (
+            <Breadcrumb onClick={props.onClick} className="folder-breadcrumb">
+                {props.icon && <Icon size={14} icon={props.icon} />}
+                {props.text}
+            </Breadcrumb>
+        );
+    };
+
+    private static GetFileInfoTypes(fileBrowserMode: BrowserMode): Array<FileInfoType> {
+        switch (fileBrowserMode) {
+            case BrowserMode.File:
+                return [FileInfoType.IMAGE_FILE, FileInfoType.IMAGE_HEADER];
+            case BrowserMode.SaveFile:
+                return [FileInfoType.SAVE_IMAGE, FileInfoType.IMAGE_FILE, FileInfoType.IMAGE_HEADER];
+            case BrowserMode.Catalog:
+                return [FileInfoType.CATALOG_FILE, FileInfoType.CATALOG_HEADER];
+            case BrowserMode.RegionExport:
+                return [FileInfoType.SELECT_REGION, FileInfoType.REGION_FILE];
+            default:
+                return [FileInfoType.REGION_FILE];
+        }
+    }
+
+    @computed get pathItems() {
+        const fileBrowserStore = FileBrowserStore.Instance;
+        let pathItems: BreadcrumbProps[] = [
+            {
+                icon: "desktop",
+                onClick: () => this.handleBreadcrumbClicked("")
+            }
+        ];
+
+        const fileList = fileBrowserStore.getfileListByMode;
+        if (fileList) {
+            const path = fileList.directory;
+            if (path && path !== ".") {
+                const dirNames = path.split("/");
+                let parentPath = "";
+                if (dirNames.length) {
+                    for (const dirName of dirNames) {
+                        if (!dirName) {
+                            continue;
+                        }
+                        parentPath += `/${dirName}`;
+                        const targetPath = parentPath;
+                        pathItems.push({
+                            text: dirName,
+                            onClick: () => this.handleBreadcrumbClicked(targetPath)
+                        });
+                    }
+                }
+            }
+        }
+        return pathItems;
+    }
+
+    private handleInputPathChanged = (ev: React.ChangeEvent<HTMLInputElement>) => {
+        this.setInputPathString(ev.target.value);
+    };
+
+    private submitInputPath = (keyEvent?) => {
+        if (keyEvent && keyEvent?.keyCode === 13 && this.inputPathString !== "") {
+            this.handleBreadcrumbClicked(this.inputPathString);
+            this.switchEditPathMode();
+        }
+    };
+
+    @action setInputPathString = (inputPathString: string) => {
+        this.inputPathString = inputPathString.replace("\b", "");
+        if (this.inputPathString.length === 1 && this.inputPathString === ".") {
+            this.inputPathString = "";
+        }
+        if (this.inputPathString.length > 1 && this.inputPathString.slice(-1) === "/") {
+            this.inputPathString = this.inputPathString.slice(0, -1);
+        }
+    };
+
+    @action switchEditPathMode = () => {
+        const appStore = AppStore.Instance;
+        const fileBrowserStore = appStore.fileBrowserStore;
+        this.inputPathString = "/" + fileBrowserStore.getfileListByMode.directory;
+        this.enableEditPath = !this.enableEditPath;
+    };
+}

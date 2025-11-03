@@ -1,0 +1,34 @@
+syntax = "proto3";
+package CARTA;
+
+import "defs.proto";
+import "enums.proto";
+import "open_catalog_file.proto";
+import "contour.proto";
+import "concat_stokes_files.proto";
+
+message ImageProperties {
+    string directory = 1;
+    string file = 2;
+    bool lel_expr = 3;
+    string hdu = 4;
+    sfixed32 file_id = 5;
+    RenderMode render_mode = 6;
+    sfixed32 channel = 7;
+    sfixed32 stokes = 8;
+    map<sfixed32, RegionInfo> regions = 9;
+    SetContourParameters contour_settings = 10;
+    repeated StokesFile stokes_files = 11;
+    bool support_aips_beam = 12;
+}
+
+message ResumeSession {
+    repeated ImageProperties images = 1;
+    repeated OpenCatalogFile catalog_files = 2;
+}
+
+message ResumeSessionAck {
+    bool success = 1;
+    string message = 2;
+}
+

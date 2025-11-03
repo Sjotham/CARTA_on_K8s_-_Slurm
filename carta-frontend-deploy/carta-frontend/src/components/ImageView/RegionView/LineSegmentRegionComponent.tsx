@@ -1,0 +1,403 @@
+import * as React from "react";
+import {Arrow, Group, Line} from "react-konva";
+import {Colors} from "@blueprintjs/core";
+import {CARTA} from "carta-protobuf";
+import Konva from "konva";
+import {action, makeObservable, observable} from "mobx";
+import {observer} from "mobx-react";
+
+import {Point2D} from "models";
+import {AppStore} from "stores";
+import {FrameStore, RegionStore, VectorAnnotationStore} from "stores/Frame";
+import {add2D, angle2D, average2D, closestPointOnLine, rotate2D, subtract2D, transformPoint} from "utilities";
+
+import {Anchor, NonEditableAnchor, ROTATOR_ANCHOR_HEIGHT} from "./InvariantShapes";
+import {adjustPosToUnityStage, canvasToTransformedImagePos, transformedImageToCanvasPos} from "./shared";
+
+interface LineSegmentRegionComponentProps {
+    region: RegionStore;
+    frame: FrameStore;
+    layerWidth: number;
+    layerHeight: number;
+    listening: boolean;
+    selected: boolean;
+    isRegionCornerMode: boolean;
+    stageRef: any;
+    onSelect?: (region: RegionStore) => void;
+    onDoubleClick?: (region: RegionStore) => void;
+}
+
+const NEW_ANCHOR_MAX_DISTANCE = 16;
+const INVALID_POLYGON_COLOR = Colors.ROSE4;
+const DOUBLE_CLICK_THRESHOLD = 300;
+
+@observer
+export class LineSegmentRegionComponent extends React.Component<LineSegmentRegionComponentProps> {
+    @observable hoverIndex: number;
+    @observable hoverIntersection: Point2D;
+
+    private previousCursorStyle: string;
+    private addControlPointTimer;
+
+    constructor(props: any) {
+        super(props);
+        makeObservable(this);
+    }
+
+    componentDidUpdate() {
+        AppStore.Instance.resetImageRatio();
+    }
+
+    private handleContextMenu = (konvaEvent: Konva.KonvaEventObject<MouseEvent>) => {
+        konvaEvent.evt.preventDefault();
+    };
+
+    private handleDoubleClick = () => {
+        clearTimeout(this.addControlPointTimer);
+        this.props.onDoubleClick?.(this.props.region);
+    };
+
+    @action private handleClick = (konvaEvent: Konva.KonvaEventObject<MouseEvent>) => {
+        const mouseEvent = konvaEvent.evt;
+
+        if (mouseEvent.button === 0 && !(mouseEvent.ctrlKey || mouseEvent.metaKey)) {
+            const region = this.props.region;
+            this.props.onSelect?.(region);
+
+            // Add a new control point to the region between two existing control points
+            if (
+                region.regionType !== CARTA.RegionType.LINE &&
+                region.regionType !== CARTA.RegionType.ANNLINE &&
+                region.regionType !== CARTA.RegionType.ANNVECTOR &&
+                this.hoverIntersection &&
+                this.hoverIndex >= 0 &&
+                this.hoverIndex < region.controlPoints.length
+            ) {
+                const currentControlPoints = region.controlPoints.slice(0);
+                currentControlPoints.splice(this.hoverIndex + 1, 0, this.hoverIntersection);
+                // Skip SET_REGION update, since the new control point lies on the line between two existing points
+                clearTimeout(this.addControlPointTimer);
+                this.addControlPointTimer = setTimeout(() => {
+                    region.setControlPoints(currentControlPoints, true, false);
+                    this.hoverIntersection = null;
+                }, DOUBLE_CLICK_THRESHOLD);
+            }
+        }
+    };
+
+    private handleAnchorDragStart = () => {
+        this.props.onSelect?.(this.props.region);
+        this.props.region.beginEditing();
+    };
+
+    private handleAnchorDragEnd = () => {
+        this.props.region.endEditing();
+    };
+
+    @action private handleAnchorDrag = (konvaEvent: Konva.KonvaEventObject<MouseEvent>) => {
+        if (konvaEvent.currentTarget) {
+            const node = konvaEvent.target;
+            const region = this.props.region;
+            const frame = this.props.frame;
+            const index = node.index;
+            const anchor = node.id();
+            const evt = konvaEvent.evt;
+            const offsetPoint = adjustPosToUnityStage(node.position(), this.props.stageRef.current);
+            if (anchor.includes("rotator")) {
+                // Calculate rotation from anchor position
+                let newAnchorPoint = canvasToTransformedImagePos(offsetPoint.x, offsetPoint.y, frame, this.props.layerWidth, this.props.layerHeight);
+                if (frame.spatialReference) {
+                    newAnchorPoint = transformPoint(frame.spatialTransformAST, newAnchorPoint, true);
+                }
+                const delta = subtract2D(newAnchorPoint, region.center);
+                const topAnchorPosition = rotate2D({x: 1, y: 0}, (region.rotation * Math.PI) / 180.0);
+                const angle = (180.0 / Math.PI) * angle2D(topAnchorPosition, delta);
+                region.setRotation(region.rotation + angle);
+            } else if (index >= 0 && index < region.controlPoints.length) {
+                let positionImageSpace = canvasToTransformedImagePos(offsetPoint.x, offsetPoint.y, frame, this.props.layerWidth, this.props.layerHeight);
+                if (frame.spatialReference) {
+                    positionImageSpace = transformPoint(frame.spatialTransformAST, positionImageSpace, true);
+                }
+                const isCtrlPressed = evt.ctrlKey || evt.metaKey;
+                if (
+                    (region.regionType !== CARTA.RegionType.LINE && region.regionType !== CARTA.RegionType.ANNLINE && region.regionType !== CARTA.RegionType.ANNVECTOR) ||
+                    (this.props.isRegionCornerMode && !isCtrlPressed) ||
+                    (!this.props.isRegionCornerMode && isCtrlPressed)
+                ) {
+                    region.setControlPoint(index, positionImageSpace);
+                    this.hoverIntersection = null;
+                } else {
+                    if (index === 0) {
+                        region.setControlPoints([positionImageSpace, {x: region.center.x * 2 - positionImageSpace.x, y: region.center.y * 2 - positionImageSpace.y}]);
+                    } else {
+                        region.setControlPoints([{x: region.center.x * 2 - positionImageSpace.x, y: region.center.y * 2 - positionImageSpace.y}, positionImageSpace]);
+                    }
+                    this.hoverIntersection = null;
+                }
+            }
+        }
+    };
+
+    private handleAnchorDoubleClick = (konvaEvent: Konva.KonvaEventObject<MouseEvent>) => {
+        const node = konvaEvent.target;
+        if (node) {
+            const index = node.index;
+            const region = this.props.region;
+            // Can only remove points if the polygon currently has 4 or more control points
+            if (index >= 0 && index < region.controlPoints.length && region.controlPoints.length >= 4) {
+                // grab a copy of the array and remove the clicked control point
+                const existingPoints = region.controlPoints.slice(0);
+                existingPoints.splice(index, 1);
+                region.setControlPoints(existingPoints);
+            }
+        }
+    };
+
+    @action private handleStrokeMouseEnter = (konvaEvent: Konva.KonvaEventObject<MouseEvent>) => {
+        if (konvaEvent.target?.getStage()) {
+            this.previousCursorStyle = konvaEvent.target.getStage().container().style.cursor;
+        }
+        this.handleMouseMove(konvaEvent);
+    };
+
+    @action private handleStrokeMouseLeave = (konvaEvent: Konva.KonvaEventObject<MouseEvent>) => {
+        this.hoverIntersection = null;
+        if (konvaEvent.target?.getStage()) {
+            konvaEvent.target.getStage().container().style.cursor = this.previousCursorStyle;
+        }
+    };
+
+    @action private handleMouseMove = (konvaEvent: Konva.KonvaEventObject<MouseEvent>) => {
+        const mouseEvent = konvaEvent.evt;
+        const region = this.props.region;
+        const frame = this.props.frame;
+
+        if (this.props.selected && region.controlPoints.length >= 2) {
+            let positionImageSpace = canvasToTransformedImagePos(mouseEvent.offsetX, mouseEvent.offsetY, frame, this.props.layerWidth, this.props.layerHeight);
+            if (frame.spatialReference) {
+                positionImageSpace = transformPoint(frame.spatialTransformAST, positionImageSpace, true);
+            }
+            let minDistance = Number.MAX_VALUE;
+            let closestIndex = -1;
+            let closestPoint: Point2D = null;
+            // Find closest point on each line segment, select the closest overall that actually lies on the line segment
+            for (let i = 0; i < (region.regionType === CARTA.RegionType.POLYLINE ? region.controlPoints.length - 1 : region.controlPoints.length); i++) {
+                const pointCheck = closestPointOnLine(positionImageSpace, region.controlPoints[i], region.controlPoints[(i + 1) % region.controlPoints.length]);
+                if (pointCheck.bounded && pointCheck.distance < minDistance) {
+                    minDistance = pointCheck.distance;
+                    closestPoint = pointCheck.point;
+                    closestIndex = i;
+                }
+            }
+
+            if (closestIndex >= 0 && minDistance <= NEW_ANCHOR_MAX_DISTANCE) {
+                this.hoverIntersection = closestPoint;
+                this.hoverIndex = closestIndex;
+                if (konvaEvent.target?.getStage()) {
+                    konvaEvent.target.getStage().container().style.cursor = "crosshair";
+                }
+            } else {
+                this.hoverIntersection = null;
+                if (konvaEvent.target?.getStage()) {
+                    konvaEvent.target.getStage().container().style.cursor = this.previousCursorStyle;
+                }
+            }
+        }
+    };
+
+    private handleAnchorMouseEnter = (konvaEvent: Konva.KonvaEventObject<MouseEvent>) => {
+        if (konvaEvent.target?.getStage()) {
+            this.previousCursorStyle = konvaEvent.target.getStage().container().style.cursor;
+            konvaEvent.target.getStage().container().style.cursor = "move";
+        }
+    };
+
+    private handleAnchorMouseOut = (konvaEvent: Konva.KonvaEventObject<MouseEvent>) => {
+        if (konvaEvent.target?.getStage()) {
+            konvaEvent.target.getStage().container().style.cursor = this.previousCursorStyle;
+        }
+    };
+
+    @action handleDragStart = () => {
+        this.props.onSelect?.(this.props.region);
+        this.props.region.beginEditing();
+        this.hoverIntersection = null;
+    };
+
+    @action handleDragEnd = () => {
+        this.props.region.endEditing();
+    };
+
+    @action handleDrag = (konvaEvent: Konva.KonvaEventObject<MouseEvent>) => {
+        if (konvaEvent.target) {
+            const region = this.props.region;
+            const frame = this.props.frame;
+            const centerImageSpace = average2D(region.controlPoints);
+            const position = adjustPosToUnityStage(konvaEvent.target.position(), this.props.stageRef.current);
+            let newPosition = canvasToTransformedImagePos(position.x, position.y, frame, this.props.layerWidth, this.props.layerHeight);
+            if (frame.spatialReference) {
+                newPosition = transformPoint(frame.spatialTransformAST, newPosition, true);
+            }
+            const deltaPosition = subtract2D(newPosition, centerImageSpace);
+            const newPoints = region.controlPoints.map(p => add2D(p, deltaPosition));
+            region.setControlPoints(newPoints, false, false);
+        }
+    };
+
+    private anchorNode(x: number, y: number, rotation: number = 0, key: number, isRotator: boolean = false): React.ReactNode {
+        return (
+            <Anchor
+                key={key}
+                anchor={isRotator ? "rotator" : `anchor-${key}`}
+                x={x}
+                y={y}
+                rotation={rotation}
+                isRotator={isRotator}
+                onMouseEnter={this.handleAnchorMouseEnter}
+                onMouseOut={this.handleAnchorMouseOut}
+                onDragStart={this.handleAnchorDragStart}
+                onDragEnd={this.handleAnchorDragEnd}
+                onDragMove={this.handleAnchorDrag}
+                onDblClick={
+                    this.props.region.regionType === CARTA.RegionType.LINE || this.props.region.regionType === CARTA.RegionType.ANNLINE || this.props.region.regionType === CARTA.RegionType.ANNVECTOR ? null : this.handleAnchorDoubleClick
+                }
+                isLineRegion={this.props.region.regionType === CARTA.RegionType.LINE || this.props.region.regionType === CARTA.RegionType.ANNLINE || this.props.region.regionType === CARTA.RegionType.ANNVECTOR}
+            />
+        );
+    }
+
+    render() {
+        const region = this.props.region;
+        const frame = this.props.frame;
+        const zoomLevel = frame.spatialReference?.zoomLevel || frame.zoomLevel;
+        const rotation = frame.hasSquarePixels ? -region.rotation + 90.0 : (-Math.atan(Math.tan((region.rotation * Math.PI) / 180) * frame.aspectRatio) * 180) / Math.PI;
+
+        let controlPoints = region.controlPoints;
+        let centerPointCanvasSpace: Point2D;
+        let anchors = null;
+        let newAnchor = null;
+        let pointArray: Array<number>;
+        const imageRatio = AppStore.Instance.imageRatio;
+        // trigger re-render when exporting images and changing devicePixelRatio (switching monitor)
+        /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
+        const pixelRatio = AppStore.Instance.pixelRatio;
+
+        if (frame.spatialReference) {
+            const centerReferenceImage = average2D(controlPoints);
+            const centerSecondaryImage = transformPoint(frame.spatialTransformAST, centerReferenceImage, false);
+            centerPointCanvasSpace = transformedImageToCanvasPos(centerSecondaryImage, frame, this.props.layerWidth, this.props.layerHeight, this.props.stageRef.current);
+            const pointsSecondaryImage = region.getRegionApproximation(frame.spatialTransformAST);
+            const N = (pointsSecondaryImage as Point2D[]).length;
+            pointArray = new Array<number>(N * 2);
+            for (let i = 0; i < N; i++) {
+                const approxPointPixelSpace = transformedImageToCanvasPos(pointsSecondaryImage[i], frame, this.props.layerWidth, this.props.layerHeight, this.props.stageRef.current);
+                pointArray[i * 2] = approxPointPixelSpace.x - centerPointCanvasSpace.x;
+                pointArray[i * 2 + 1] = approxPointPixelSpace.y - centerPointCanvasSpace.y;
+            }
+
+            // Construct anchors if region is selected
+            if (this.props.selected && this.props.listening && !region.locked && !AppStore.Instance.activeFrame?.regionSet.locked) {
+                anchors = controlPoints.map((p, i) => {
+                    const pSecondaryImage = transformPoint(frame.spatialTransformAST, p, false);
+                    const pCanvasPos = transformedImageToCanvasPos(pSecondaryImage, frame, this.props.layerWidth, this.props.layerHeight, this.props.stageRef.current);
+                    return this.anchorNode(pCanvasPos.x, pCanvasPos.y, rotation, i);
+                });
+
+                if ((this.props.region.regionType === CARTA.RegionType.LINE || this.props.region.regionType === CARTA.RegionType.ANNLINE || this.props.region.regionType === CARTA.RegionType.ANNVECTOR) && frame.hasSquarePixels) {
+                    // trigger rotation anchor re-render when zooming
+                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                    const zoomLevel = frame.spatialReference?.zoomLevel;
+                    const inverseScale = 1 / this.props.stageRef.current.scaleX();
+                    const rotatorOffset = ROTATOR_ANCHOR_HEIGHT * inverseScale;
+                    const rotatorAngle = (rotation * Math.PI) / 180.0;
+                    anchors.push(this.anchorNode(centerPointCanvasSpace.x + rotatorOffset * Math.sin(rotatorAngle), centerPointCanvasSpace.y - rotatorOffset * Math.cos(rotatorAngle), rotation, 2, true));
+                }
+            }
+
+            if (this.hoverIntersection && !region.locked && !AppStore.Instance.activeFrame?.regionSet.locked) {
+                const pSecondaryImage = transformPoint(frame.spatialTransformAST, this.hoverIntersection, false);
+                const pCanvasPos = transformedImageToCanvasPos(pSecondaryImage, frame, this.props.layerWidth, this.props.layerHeight, this.props.stageRef.current);
+                newAnchor = <NonEditableAnchor x={pCanvasPos.x} y={pCanvasPos.y} rotation={rotation} />;
+            }
+        } else {
+            controlPoints = controlPoints.map(p => {
+                return transformedImageToCanvasPos(p, frame, this.props.layerWidth, this.props.layerHeight, this.props.stageRef.current);
+            });
+            centerPointCanvasSpace = average2D(controlPoints);
+            // Construct anchors if region is selected
+            if (this.props.selected && this.props.listening && !region.locked && !AppStore.Instance.activeFrame?.regionSet.locked) {
+                anchors = new Array<React.ReactNode>(controlPoints.length);
+                for (let i = 0; i < controlPoints.length; i++) {
+                    anchors[i] = this.anchorNode(controlPoints[i].x, controlPoints[i].y, rotation, i);
+                }
+
+                if ((this.props.region.regionType === CARTA.RegionType.LINE || this.props.region.regionType === CARTA.RegionType.ANNLINE || this.props.region.regionType === CARTA.RegionType.ANNVECTOR) && frame.hasSquarePixels) {
+                    // trigger rotation anchor re-render when zooming
+                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                    const zoomLevel = frame.zoomLevel;
+                    const inverseScale = 1 / this.props.stageRef.current.scaleX();
+                    const rotatorOffset = ROTATOR_ANCHOR_HEIGHT * inverseScale;
+                    const rotatorAngle = (rotation * Math.PI) / 180.0;
+                    anchors.push(this.anchorNode(centerPointCanvasSpace.x + rotatorOffset * Math.sin(rotatorAngle), centerPointCanvasSpace.y - rotatorOffset * Math.cos(rotatorAngle), rotation, 2, true));
+                }
+            }
+
+            if (this.hoverIntersection && !region.locked && !AppStore.Instance.activeFrame?.regionSet.locked) {
+                const anchorPositionPixelSpace = transformedImageToCanvasPos(this.hoverIntersection, frame, this.props.layerWidth, this.props.layerHeight, this.props.stageRef.current);
+                newAnchor = <NonEditableAnchor x={anchorPositionPixelSpace.x} y={anchorPositionPixelSpace.y} rotation={rotation} />;
+            }
+
+            pointArray = new Array<number>(controlPoints.length * 2);
+            for (let i = 0; i < pointArray.length / 2; i++) {
+                pointArray[i * 2] = controlPoints[i].x - centerPointCanvasSpace.x;
+                pointArray[i * 2 + 1] = controlPoints[i].y - centerPointCanvasSpace.y;
+            }
+        }
+
+        const commonProps = {
+            x: centerPointCanvasSpace.x,
+            y: centerPointCanvasSpace.y,
+            stroke: region.isSimplePolygon ? region.color : INVALID_POLYGON_COLOR,
+            strokeWidth: region.lineWidth,
+            opacity: region.isTemporary ? 0.5 : region.locked ? 0.7 : 1,
+            dash: [region.dashLength],
+            listening: this.props.listening && !region.locked,
+            onClick: this.handleClick,
+            onDblClick: this.handleDoubleClick,
+            onContextMenu: this.handleContextMenu,
+            onDragStart: this.handleDragStart,
+            onDragEnd: this.handleDragEnd,
+            onDragMove: this.handleDrag,
+            perfectDrawEnabled: false,
+            strokeScaleEnabled: false,
+            draggable: true,
+            points: pointArray,
+            hitStrokeWidth: NEW_ANCHOR_MAX_DISTANCE * 2
+        };
+
+        return (
+            <Group>
+                {region.regionType === CARTA.RegionType.ANNVECTOR ? (
+                    <Arrow
+                        {...commonProps}
+                        fill={region.color}
+                        pointerWidth={((region as VectorAnnotationStore).pointerWidth * imageRatio) / zoomLevel}
+                        pointerLength={((region as VectorAnnotationStore).pointerLength * imageRatio) / zoomLevel}
+                    />
+                ) : (
+                    <Line
+                        {...commonProps}
+                        closed={!region.creating && (region.regionType === CARTA.RegionType.POLYGON || region.regionType === CARTA.RegionType.ANNPOLYGON)}
+                        onMouseEnter={this.props.region.regionType === CARTA.RegionType.LINE || this.props.region.regionType === CARTA.RegionType.ANNLINE ? null : this.handleStrokeMouseEnter}
+                        onMouseLeave={this.props.region.regionType === CARTA.RegionType.LINE || this.props.region.regionType === CARTA.RegionType.ANNLINE ? null : this.handleStrokeMouseLeave}
+                        onMouseMove={this.props.region.regionType === CARTA.RegionType.LINE || this.props.region.regionType === CARTA.RegionType.ANNLINE ? null : this.handleMouseMove}
+                    />
+                )}
+                <Group>
+                    {anchors}
+                    {newAnchor}
+                </Group>
+            </Group>
+        );
+    }
+}

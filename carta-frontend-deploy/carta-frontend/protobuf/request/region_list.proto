@@ -1,0 +1,34 @@
+syntax = "proto3";
+package CARTA;
+
+import "defs.proto";
+import "enums.proto";
+
+// REGION_LIST_REQUEST:
+// Requests the list of available region files for a given directory.
+// Backend responds with REGION_LIST_RESPONSE
+message RegionListRequest {
+    // Required directory name
+    string directory = 1;
+    // Filter mode to use when showing the file list
+    FileListFilterMode filter_mode = 2;
+}
+
+// REGION_LIST_RESPONSE
+// Response for REGION_LIST_REQUEST.
+// Gives a list of available region files (and their types), as well as subdirectories
+message RegionListResponse {
+    // Defines whether the REGION_LIST_REQUEST was successful
+    bool success = 1;
+    // Error message (if applicable)
+    string message = 2;
+    // Directory of listing
+    string directory = 3;
+    // Directory parent (null/empty if top-level)
+    string parent = 4;
+    // List of available image files, with file type information and size information.
+    repeated FileInfo files = 5;
+    // List of available subdirectories, with number of items and modified date
+    repeated DirectoryInfo subdirectories = 6;
+    bool cancel = 7;
+}

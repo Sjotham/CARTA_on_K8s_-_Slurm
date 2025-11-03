@@ -1,0 +1,124 @@
+@import "~@blueprintjs/core/lib/scss/variables.scss";
+
+.stats-widget {
+    width: 100%;
+    height: 100%;
+
+    border: 1px solid transparent;
+    border-radius: 3px;
+
+    user-select: none;
+
+    .stats-toolbar {
+        overflow: hidden;
+        display: flex;
+
+        .unlinked-to-selected {
+            border: 1px solid transparent;
+        }
+
+        .linked-to-selected-stokes {
+            border: 1px solid $blue2;
+
+            &.dark-theme {
+                border: 1px solid $blue4;
+            }
+
+            transition: border 250ms linear;
+        }
+    }
+
+    .#{$ns}-form-group {
+        padding: 5px 5px 1px;
+        margin: 0;
+    }
+
+    .stats-display {
+        height: calc(100% - 40px);
+
+        table {
+            height: 100%;
+            overflow-y: auto;
+            padding: 5px 5px 0;
+            display: block;
+            user-select: text;
+            thead {
+                &.dark-theme {
+                    background: $dark-gray4;
+
+                    tr {
+                        th {
+                            border-top: 1px solid $dark-gray4;
+                            border-bottom: 1px solid $dark-gray5;
+                            border-left: 1px solid $dark-gray4;
+
+                            &:last-of-type {
+                                border-right: 1px solid $dark-gray4;
+                            }
+                        }
+                    }
+                }
+
+                tr {
+                    display: block;
+
+                    th {
+                        padding: 3px;
+                        font-size: 13px;
+                        cursor: default;
+                        border-top: 1px solid $gray5;
+                        border-bottom: 1px solid $gray4;
+                        border-left: 1px solid $gray5;
+
+                        &:last-of-type {
+                            border-right: 1px solid $gray5;
+                        }
+                    }
+                }
+            }
+
+            tbody {
+                display: block;
+                background: $white;
+
+                &.dark-theme {
+                    background: $dark-gray3;
+
+                    tr {
+                        td {
+                            border-left: 1px solid $dark-gray3;
+                            border-bottom: 1px solid $dark-gray5;
+
+                            &:last-of-type {
+                                border-right: 1px solid $dark-gray3;
+                            }
+                        }
+                    }
+                }
+
+                tr {
+                    td {
+                        padding: 3px;
+                        font-size: 12px;
+                        cursor: pointer;
+                        border-left: 1px solid $gray5;
+                        border-bottom: 1px solid $gray4;
+
+                        &:last-of-type {
+                            border-right: 1px solid $gray5;
+                        }
+                    }
+                }
+            }
+        }
+
+        .stats-export-data {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            margin: 0 5px 15px 0;
+            transition: opacity 400ms;
+            user-select: none;
+        }
+    }
+}

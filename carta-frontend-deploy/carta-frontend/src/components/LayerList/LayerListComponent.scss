@@ -1,0 +1,56 @@
+@import "~@blueprintjs/core/lib/scss/variables.scss";
+
+.layer-list-widget {
+    width: 100%;
+    height: 100%;
+    user-select: none;
+    padding: 5px;
+
+    .name-cell {
+        cursor: pointer;
+    }
+
+    .#{$ns}-table-column-name {
+        font-size: 12px;
+    }
+
+    .#{$ns}-table-cell {
+        user-select: text;
+    }
+
+    .#{$ns}-button {
+        font-size: 11px;
+
+        &.#{$ns}-small {
+            min-height: 13px;
+        }
+
+        .#{$ns}-button-text {
+            line-height: 13px;
+        }
+
+        &.outlined {
+            border: solid 1px;
+        }
+
+        border: solid 1px transparent;
+        padding: 0 4px;
+        margin-right: 2px;
+    }
+
+    .row-cell {
+        &.active {
+            font-weight: bold;
+        }
+
+        .#{$ns}-popover-target:last-of-type {
+            .#{$ns}-button {
+                margin-right: 0;
+            }
+        }
+    }
+
+    .#{$ns}-popover-wrapper + .#{$ns}-popover-wrapper {
+        margin-left: 2px;
+    }
+}

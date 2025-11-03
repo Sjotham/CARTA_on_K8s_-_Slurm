@@ -1,0 +1,18 @@
+.profiler-info {
+    position: absolute;
+    bottom: 0;
+    left: 5px;
+    margin: 0 0 0 0;
+    user-select: none;
+
+    .pre {
+        font-size: x-small;
+        margin: 0 0 0 0;
+    }
+
+    .pre-line {
+        white-space: pre-line;
+        font-size: x-small;
+        margin: 0 0 0 0;
+    }
+}

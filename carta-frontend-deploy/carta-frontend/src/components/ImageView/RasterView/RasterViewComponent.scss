@@ -1,0 +1,13 @@
+.raster-div {
+    position: absolute;
+    left: 0;
+    user-select: none;
+    &.docked {
+        z-index: 1;
+    }
+
+    .raster-canvas {
+        position: absolute;
+        z-index: 0;
+    }
+}

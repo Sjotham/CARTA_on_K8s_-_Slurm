@@ -1,0 +1,10 @@
+@import "~@blueprintjs/core/lib/scss/variables.scss";
+
+.coordinate-panel {
+    display: flex;
+    flex-direction: row;
+    width: 280px;
+    .#{$ns}-control {
+        margin-top: 7px;
+    }
+}

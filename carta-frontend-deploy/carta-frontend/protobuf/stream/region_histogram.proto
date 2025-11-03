@@ -1,0 +1,23 @@
+syntax = "proto3";
+package CARTA;
+
+import "defs.proto";
+
+// REGION_HISTOGRAM_DATA:
+//Stats data for a specific region
+message RegionHistogramData {
+    // The file ID that the histogram corresponds to
+    sfixed32 file_id = 1;
+    // The region ID corresponding to the histogram. If the histogram corresponds to the entire current 2D image, the region ID has a value of -1.
+    sfixed32 region_id = 2;
+    // The image channel corresponding to the histogram
+    sfixed32 channel = 3;
+    // The image stokes corresponding to the histogram
+    sfixed32 stokes = 4;
+    // Array of histograms of the current file, region, channel and stokes
+    Histogram histograms = 5;
+    // Progress indicator, in the case of partial histogram results being sent
+    float progress = 6;
+    // Histogram configuration from the frontend
+    HistogramConfig config = 7;
+}

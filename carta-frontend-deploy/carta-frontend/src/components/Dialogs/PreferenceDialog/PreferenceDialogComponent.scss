@@ -1,0 +1,99 @@
+@import "~@blueprintjs/core/lib/scss/variables.scss";
+
+.preference-dialog {
+    .#{$ns}-tabs {
+        height: 100%;
+    }
+
+    .#{$ns}-tab-panel {
+        height: 100%;
+        overflow: auto;
+        width: 100%;
+    }
+
+    .#{$ns}-form-group {
+        white-space: nowrap;
+
+        &:first-of-type {
+            margin-left: 0px;
+        }
+        .#{$ns}-label {
+            min-width: 16em;
+            text-align: right;
+        }
+    }
+
+    .log-event-panel .#{$ns}-form-group .#{$ns}-label {
+        width: auto !important;
+        text-align: left;
+    }
+
+    .#{$ns}-numeric-input {
+        .#{$ns}-input-group {
+            width: 60px;
+        }
+    }
+
+    .log-event-header {
+        margin: 0;
+    }
+
+    .log-event-list {
+        .#{$ns}-form-content {
+            display: flex;
+            flex-wrap: wrap;
+            box-sizing: content-box;
+            .log-event-checkbox {
+                width: 265px;
+                margin-bottom: 0;
+            }
+        }
+    }
+
+    .wcs-matching {
+        .#{$ns}-form-content {
+            display: flex;
+            flex-wrap: wrap;
+            box-sizing: content-box;
+        }
+    }
+
+    .telemetry-callout {
+        margin: 0 10px 20px 10px;
+
+        .telemetry-id-text {
+            display: flex;
+            p {
+                font-style: italic;
+                padding-top: 12px;
+                padding-right: 5px;
+            }
+        }
+    }
+
+    .telemetry-mode-form-group {
+        .#{$ns}-form-helper-text {
+            width: 275px;
+        }
+    }
+
+    .pv-preview-cube-size-limit {
+        display: flex;
+        flex-direction: row;
+
+        select {
+            margin-left: 5%;
+        }
+    }
+
+    .#{$ns}-html-select select,
+    .#{$ns}-select select {
+        width: auto;
+    }
+
+    user-select: none !important;
+
+    .#{$ns}-html-table {
+        width: 90%;
+    }
+}

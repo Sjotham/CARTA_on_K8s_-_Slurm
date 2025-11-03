@@ -1,0 +1,25 @@
+@import "~@blueprintjs/core/lib/scss/variables.scss";
+
+.select-region {
+    overflow: hidden;
+    height: 100%;
+    width: 100%;
+    margin-top: 10px;
+    padding-top: 10px;
+    padding-left: 7px;
+    display: flex;
+    flex-direction: column;
+
+    .select-status {
+        margin-top: 0;
+    }
+
+    .#{$ns}-icon {
+        opacity: 0.5;
+    }
+
+    .region-list {
+        height: 100%;
+        width: 100%;
+    }
+}

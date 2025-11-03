@@ -1,0 +1,17 @@
+@import "~@blueprintjs/core/lib/scss/variables.scss";
+
+.colormap-select-popover.#{$ns}-dark {
+    .equation-div {
+        filter: invert(1);
+    }
+
+    .#{$ns}-menu-item.#{$ns}-active {
+        .equation-div {
+            filter: invert(1) brightness(2);
+        }
+
+        .#{$ns}-menu-item-label {
+            filter: brightness(2);
+        }
+    }
+}

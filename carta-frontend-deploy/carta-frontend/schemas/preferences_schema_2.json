@@ -1,0 +1,421 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Preferences",
+    "description": "Schema for CARTA Preferences (Version 2)",
+    "$id": "https://cartavis.org/schemas/preferences_schema_2.json",
+    "type": "object",
+    "required": ["version"],
+    "properties": {
+        "version": {
+            "description": "The version of the preferences contained",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2
+        },
+        "theme": {
+            "enum": ["auto", "light", "dark"]
+        },
+        "autoLaunch": {
+            "type": "boolean"
+        },
+        "fileSortingString": {
+            "type": "string",
+            "pattern": "^([+\\-])(date|filename|type|size)$"
+        },
+        "fileFilteringType": {
+            "enum": ["fuzzy", "unix", "regex"]
+        },
+        "layout": {
+            "type": "string"
+        },
+        "cursorPosition": {
+            "enum": ["fixed", "tracking"]
+        },
+        "zoomMode": {
+            "enum": ["fit", "full"]
+        },
+        "zoomPoint": {
+            "enum": ["cursor", "center"]
+        },
+        "dragPanning": {
+            "type": "boolean"
+        },
+        "spectralMatchingType": {
+            "enum": ["VRAD", "VOPT", "FREQ", "WAVE", "AWAV", "CHANNEL"]
+        },
+        "transparentImageBackground": {
+            "type": "boolean"
+        },
+        "scaling": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 7
+        },
+        "colormap": {
+            "type": "string"
+        },
+        "percentile": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+        },
+        "scalingAlpha": {
+            "type": "number",
+            "minimum": 0.1,
+            "maximum": 1000000
+        },
+        "scalingGamma": {
+            "type": "number",
+            "minimum": 0.1,
+            "maximum": 2
+        },
+        "nanColorHex": {
+            "type": "string",
+            "description": "TODO: validate color string"
+        },
+        "nanAlpha": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+        },
+        "useSmoothedBiasContrast": {
+            "type": "boolean"
+        },
+        "contourGeneratorType": {
+            "enum": ["start-step-multiplier", "min-max-scaling", "percentages-ref.value", "mean-sigma-list"]
+        },
+        "contourSmoothingMode": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2
+        },
+        "contourSmoothingFactor": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 33
+        },
+        "contourNumLevels": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 15
+        },
+        "contourThickness": {
+            "type": "number",
+            "minimum": 0.5,
+            "maximum": 10
+        },
+        "contourColormapEnabled": {
+            "type": "boolean"
+        },
+        "contourColor": {
+            "type": "string",
+            "description": "TODO: validate color string"
+        },
+        "contourColormap": {
+            "type": "string"
+        },
+        "vectorOverlayPixelAveraging": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 64,
+            "default": 4
+        },
+        "vectorOverlayFractionalIntensity": {
+            "type": "boolean",
+            "default": false
+        },
+        "vectorOverlayThickness": {
+            "type": "number",
+            "minimum": 0.5,
+            "maximum": 10
+        },
+        "vectorOverlayColormapEnabled": {
+            "type": "boolean"
+        },
+        "vectorOverlayColor": {
+            "type": "string",
+            "description": "TODO: validate color string",
+            "default": "#ffffff"
+        },
+        "vectorOverlayColormap": {
+            "type": "string",
+            "default": "viridis"
+        },
+        "astColor": {
+            "type": "string",
+            "description": "TODO: validate color string"
+        },
+        "astGridVisible": {
+            "type": "boolean"
+        },
+        "astLabelsVisible": {
+            "type": "boolean"
+        },
+        "wcsType": {
+            "enum": ["automatic", "degrees", "sexagesimal"]
+        },
+        "colorbarVisible": {
+            "type": "boolean"
+        },
+        "colorbarInteractive": {
+            "type": "boolean"
+        },
+        "colorbarPosition": {
+            "enum": ["right", "top", "bottom"]
+        },
+        "colorbarWidth": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+        },
+        "colorbarTicksDensity": {
+            "type": "number",
+            "minimum": 0.2,
+            "maximum": 20
+        },
+        "colorbarLabelVisible": {
+            "type": "boolean"
+        },
+        "beamVisible": {
+            "type": "boolean"
+        },
+        "beamColor": {
+            "type": "string"
+        },
+        "beamType": {
+            "enum": ["open", "solid"]
+        },
+        "beamWidth": {
+            "type": "number",
+            "minimum": 0.5,
+            "maximum": 10
+        },
+        "regionColor": {
+            "type": "string",
+            "description": "TODO: validate color string"
+        },
+        "regionLineWidth": {
+            "type": "number",
+            "minimum": 0.5,
+            "maximum": 10
+        },
+        "regionDashLength": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 50
+        },
+        "regionType": {
+            "enum": [0, 1, 2, 3, 4, 6]
+        },
+        "regionCreationMode": {
+            "enum": ["center", "corner"]
+        },
+        "regionSize": {
+            "type": "number",
+            "minimum": 10,
+            "maximum": 100
+        },
+        "imageCompressionQuality": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 32
+        },
+        "animationCompressionQuality": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 32
+        },
+        "GPUTileCache": {
+            "type": "integer",
+            "multipleOf": 256,
+            "minimum": 256
+        },
+        "systemTileCache": {
+            "type": "integer",
+            "multipleOf": 256,
+            "minimum": 256
+        },
+        "contourDecimation": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 32
+        },
+        "contourCompressionLevel": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 19
+        },
+        "contourChunkSize": {
+            "type": "integer",
+            "minimum": 1000
+        },
+        "contourControlMapWidth": {
+            "type": "integer",
+            "multipleOf": 128,
+            "minimum": 128
+        },
+        "streamContoursWhileZooming": {
+            "type": "boolean"
+        },
+        "lowBandwidthMode": {
+            "type": "boolean"
+        },
+        "stopAnimationPlaybackMinutes": {
+            "type": "number",
+            "minimum": 0
+        },
+        "pixelGridVisible": {
+            "type": "boolean"
+        },
+        "pixelGridColor": {
+            "type": "string"
+        },
+        "codeSnippetsEnabled": {
+            "type": "boolean"
+        },
+        "limitOverlayRedraw": {
+            "type": "boolean",
+            "default": true
+        },
+        "cursorInfoVisible": {
+            "enum": ["always", "activeImage", "hideTiled", "never"],
+            "default": "activeImage"
+        },
+        "keepLastUsedFolder": {
+            "type": "boolean",
+            "default": false
+        },
+        "lastUsedFolder": {
+            "type": "string",
+            "default": ""
+        },
+        "imageMultiPanelEnabled": {
+            "type": "boolean",
+            "default": false
+        },
+        "imagePanelMode": {
+            "enum": ["dynamic", "fixed"],
+            "default": "dynamic"
+        },
+        "imagePanelColumns": {
+            "type": "number",
+            "minimum": 1,
+            "default": 2
+        },
+        "imagePanelRows": {
+            "type": "number",
+            "minimum": 1,
+            "default": 2
+        },
+        "statsPanelEnabled": {
+            "type": "boolean",
+            "default": false
+        },
+        "statsPanelMode": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0
+        },
+        "telemetryUuid": {
+            "type": "string"
+        },
+        "telemetryMode": {
+            "enum": ["none", "minimal", "usage"],
+            "default": "usage"
+        },
+        "telemetryConsentShown": {
+            "type": "boolean",
+            "default": false
+        },
+        "telemetryLogging": {
+            "type": "boolean",
+            "default": false
+        },
+        "fileFilterMode": {
+            "enum": ["content", "extension", "all"],
+            "default": "content"
+        },
+        "pvAxesOrderReverse": {
+            "type": "boolean"
+        },
+        "autoWCSMatching": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 7
+        },
+        "colormapHex": {
+            "type": "string"
+        },
+        "colormapHexStart": {
+            "type": "string"
+        },
+        "dynamicLayoutEnable": {
+            "type": "boolean"
+        },
+        "isHighDimPriority": {
+            "type": "boolean"
+        },
+        "dynamicLayout": {
+            "type": "object"
+        },
+        "annotationColor": {
+            "type": "string"
+        },
+        "annotationLineWidth": {
+            "type": "number",
+            "minimum": 0.5,
+            "maximum": 10
+        },
+        "annotationDashLength": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 50
+        },
+        "pointAnnotationShape": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 7
+        },
+        "pointAnnotationWidth": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100
+        },
+        "textAnnotationLineWidth": {
+            "type": "number",
+            "minimum": 0.5,
+            "maximum": 10
+        },
+        "pvPreviewCubeSizeLimit": {
+            "type": "number",
+            "minimum": 0.1,
+            "description": "PV preview cube size limit, in GB."
+        },
+        "pvPreviewCubeSizeLimitUnit": {
+            "enum": ["TB", "GB", "MB", "kB", "B"],
+            "description": "This is a deprecated preference."
+        },
+        "logEventList": {
+            "type": "array",
+            "items": {
+                "type": "number"
+            }
+        },
+        "catalogDisplayedColumnSize": {
+            "type": "number",
+            "minimum": 1
+        },
+        "catalogTableSeparatorPosition": {
+            "type": "string"
+        },
+        "checkNewRelease": {
+            "type": "boolean"
+        },
+        "latestRelease": {
+            "type": "string"
+        },
+        "compatibilityAipsBeamSupport": {
+            "type": "boolean"
+        }
+    }
+}

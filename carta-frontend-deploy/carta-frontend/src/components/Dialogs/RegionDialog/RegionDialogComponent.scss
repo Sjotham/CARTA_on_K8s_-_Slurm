@@ -1,0 +1,43 @@
+@import "~@blueprintjs/core/lib/scss/variables.scss";
+
+.region-dialog {
+    .#{$ns}-dialog-body {
+        user-select: none;
+
+        .region-form {
+            user-select: none;
+
+            .#{$ns}-label {
+                width: 9em;
+                text-align: right;
+            }
+
+            .#{$ns}-form-group:first-child .#{$ns}-input {
+                width: 255px;
+            }
+
+            .#{$ns}-input {
+                width: 125px;
+            }
+
+            .#{$ns}-form-content {
+                display: flex;
+                flex-wrap: wrap;
+                flex: 1;
+                gap: 0 5px;
+
+                .info-string {
+                    display: flex;
+                    align-items: center;
+                    flex: 1 1 auto;
+                    min-width: 190px;
+                    margin-left: 5px;
+                    margin-top: 2px;
+                    font-size: x-small;
+                    font-family: monospace;
+                    user-select: text;
+                }
+            }
+        }
+    }
+}

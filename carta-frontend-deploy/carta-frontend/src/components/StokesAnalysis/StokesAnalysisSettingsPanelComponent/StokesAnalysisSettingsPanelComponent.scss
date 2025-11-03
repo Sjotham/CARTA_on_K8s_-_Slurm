@@ -1,0 +1,22 @@
+@import "~@blueprintjs/core/lib/scss/variables.scss";
+
+.stokes-settings {
+    margin: 20px;
+
+    .#{$ns}-form-group {
+        &:first-of-type {
+            margin-left: 0px;
+        }
+    }
+
+    .#{$ns}-form-group .#{$ns}-label {
+        width: 11em;
+        text-align: right;
+    }
+
+    .#{$ns}-numeric-input {
+        .#{$ns}-input-group {
+            width: 60px;
+        }
+    }
+}

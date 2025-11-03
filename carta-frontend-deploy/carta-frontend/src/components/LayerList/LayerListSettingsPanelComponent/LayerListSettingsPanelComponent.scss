@@ -1,0 +1,72 @@
+@import "~@blueprintjs/core/lib/scss/variables.scss";
+
+.layer-list-settings-panel {
+    margin: 20px;
+
+    .#{$ns}-form-group {
+        &:first-of-type {
+            margin-left: 0px;
+        }
+    }
+
+    .#{$ns}-form-group .#{$ns}-label {
+        min-width: 12em;
+        width: 12em;
+        text-align: right;
+    }
+
+    .#{$ns}-button-text {
+        display: block;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .name-text {
+        .#{$ns}-label {
+            min-width: 110px;
+            width: 110px;
+        }
+
+        .#{$ns}-button {
+            width: 200px;
+        }
+
+        .#{$ns}-form-content {
+            display: flex;
+            width: calc(100% - 120px);
+            line-height: 30px;
+
+            .end-part {
+                white-space: nowrap; // avoid new line
+            }
+            .disabled {
+                color: $pt-text-color-disabled;
+            }
+            .disabled.dark {
+                color: $pt-dark-text-color-disabled;
+            }
+            .active {
+                font-weight: bold;
+            }
+        }
+    }
+
+    .freq-input {
+        display: flex;
+
+        .#{$ns}-label {
+            min-width: 110px;
+            width: 110px;
+        }
+
+        .#{$ns}-form-group {
+            margin-right: 7px;
+
+            .#{$ns}-input-group {
+                min-width: 130px;
+                width: 130px;
+            }
+        }
+    }
+}

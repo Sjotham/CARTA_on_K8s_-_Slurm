@@ -1,0 +1,14 @@
+@import "~@blueprintjs/core/lib/scss/variables.scss";
+
+.appearance-form {
+    .#{$ns}-label {
+        width: 11em;
+        text-align: right;
+    }
+
+    .#{$ns}-numeric-input {
+        .#{$ns}-input-group {
+            width: 60px;
+        }
+    }
+}

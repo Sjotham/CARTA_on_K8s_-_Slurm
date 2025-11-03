@@ -1,0 +1,45 @@
+@import "~@blueprintjs/core/lib/scss/variables.scss";
+
+.spectral-settings {
+    margin: 20px;
+    white-space: nowrap;
+
+    .#{$ns}-form-group {
+        &:first-of-type {
+            margin-left: 0px;
+        }
+    }
+
+    .#{$ns}-form-group .#{$ns}-label {
+        text-align: right;
+        min-width: 11em;
+        width: 11em;
+    }
+
+    .conversion-tab-panel {
+        .#{$ns}-form-group .#{$ns}-label {
+            min-width: 11em;
+        }
+    }
+
+    .moment-tab-panel {
+        .range-select .#{$ns}-form-group .#{$ns}-label {
+            margin: 0 10px 0 0;
+            min-width: 3em;
+        }
+    }
+
+    .fitting-tab-panel {
+        .#{$ns}-form-group .#{$ns}-label {
+            text-align: right;
+        }
+    }
+
+    .#{$ns}-html-select select,
+    .#{$ns}-select select {
+        width: 100%;
+        min-width: 7em;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+}

@@ -1,0 +1,70 @@
+@import "~@blueprintjs/core/lib/scss/variables.scss";
+
+.vector-overlay-dialog {
+    .#{$ns}-dialog-body {
+        user-select: none;
+
+        .#{$ns}-label {
+            min-width: 6em;
+            width: 6em;
+            text-align: right;
+        }
+
+        .#{$ns}-button:not([class*="-intent-"]).#{$ns}-align-right {
+            white-space: nowrap;
+            width: 100%;
+
+            .#{$ns}-button-text {
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+        }
+
+        .#{$ns}-form-group {
+            &:first-of-type {
+                margin-left: 0;
+            }
+        }
+
+        .vector-overlay-config-panel,
+        .vector-overlay-style-panel {
+            .#{$ns}-form-group .#{$ns}-label {
+                min-width: 10em;
+                width: 10em;
+            }
+        }
+
+        .parameter-line {
+            .#{$ns}-form-group {
+                width: 6em;
+            }
+        }
+
+        .parameter-length {
+            .#{$ns}-form-group {
+                .#{$ns}-input-group {
+                    max-width: 167px;
+                }
+            }
+        }
+
+        .#{$ns}-tabs {
+            margin: 2px;
+        }
+
+        .parameter-container {
+            .#{$ns}-form-group.#{$ns}-inline {
+                .#{$ns}-label {
+                    min-width: 2em;
+                    width: 3em;
+                }
+            }
+        }
+
+        .#{$ns}-form-content {
+            display: inline-flex;
+            width: calc(100% - 7em); // because of popover component, the subtraction of the text label width is required
+            max-width: fit-content;
+        }
+    }
+}

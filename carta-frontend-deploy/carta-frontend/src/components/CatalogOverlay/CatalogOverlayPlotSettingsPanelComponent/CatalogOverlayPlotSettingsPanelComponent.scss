@@ -1,0 +1,93 @@
+@import "~@blueprintjs/core/lib/scss/variables.scss";
+
+.catalog-settings {
+    margin: 20px;
+
+    .file-menu .#{$ns}-button {
+        white-space: nowrap;
+        width: 95%;
+        .#{$ns}-button-text {
+            min-width: 3.5em;
+        }
+    }
+    .#{$ns}-form-group {
+        &:first-of-type {
+            margin-left: 0px;
+        }
+    }
+
+    .#{$ns}-form-group.#{$ns}-inline.file-menu .#{$ns}-label {
+        width: 4em;
+        min-width: 4em;
+        text-align: right;
+    }
+
+    .#{$ns}-form-group.#{$ns}-inline {
+        .#{$ns}-label {
+            width: 8em;
+            min-width: 8em;
+            text-align: right;
+        }
+        .#{$ns}-form-content {
+            margin: 0 3px;
+        }
+        .#{$ns}-button-group {
+            width: 90%;
+        }
+    }
+
+    .#{$ns}-numeric-input {
+        .#{$ns}-input-group {
+            width: 110px;
+        }
+    }
+
+    .catalog-size-overlay {
+        .#{$ns}-input-group {
+            width: 50px;
+        }
+    }
+
+    .numeric-input-lock {
+        display: inline-flex;
+        .lock-button {
+            margin-bottom: 20px;
+        }
+    }
+
+    .parameter-container {
+        .#{$ns}-form-group.#{$ns}-inline {
+            .#{$ns}-label {
+                min-width: 2em;
+                width: 3em;
+            }
+
+            .#{$ns}-form-content {
+                display: inline-flex;
+                width: calc(100% - 5em); // because of the popover, the subtraction is needed.
+                max-width: fit-content;
+            }
+        }
+    }
+
+    .#{$ns}-button:not([class*="-intent-"]) {
+        white-space: nowrap;
+
+        .#{$ns}-button-text {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    }
+
+    .#{$ns}-form-content {
+        display: inline-flex;
+        width: calc(100% - 3em); // because of the popover, the subtraction is required
+        max-width: fit-content;
+    }
+
+    .panel-container {
+        .select-angular-unit {
+            height: 30px !important;
+        }
+    }
+}

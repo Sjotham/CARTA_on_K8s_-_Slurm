@@ -1,0 +1,48 @@
+@import "~@blueprintjs/core/lib/scss/variables.scss";
+
+.log {
+    padding: 5px;
+    height: 100%;
+    min-width: 300px;
+    user-select: text;
+    .log-entry-list {
+        height: calc(100% - 30px);
+        margin: 0;
+        padding-bottom: 5px;
+        div {
+            padding-top: 2px;
+            .#{$ns}-tag {
+                margin-right: 5px;
+            }
+        }
+    }
+
+    .log-entry-follow {
+        background: rgba($blue3, 0.3);
+    }
+
+    .log-footer {
+        height: 30px;
+        .log-level {
+            float: left;
+            margin-right: 10px;
+        }
+        .tag-list {
+            float: left;
+
+            div {
+                margin-top: 3px;
+                .#{$ns}-tag {
+                    margin-right: 5px;
+                }
+            }
+        }
+        .log-footer-right {
+            float: right;
+        }
+    }
+
+    .tag-hidden {
+        text-decoration: line-through;
+    }
+}

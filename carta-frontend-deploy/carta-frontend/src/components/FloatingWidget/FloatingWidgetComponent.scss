@@ -1,0 +1,98 @@
+@import "~@blueprintjs/core/lib/scss/variables.scss";
+
+$title-height: 25px;
+$widget-background: $light-gray5;
+$widget-background-dark: $dark-gray4;
+$title-color: $gray2;
+$title-color-dark: $pt-dark-text-color-muted;
+$selected-title-color: $blue2;
+$selected-title-color-dark: $pt-dark-heading-color;
+$border-color: $gray4;
+$border-color-dark: $black;
+$shadow-color: rgba($blue2, 0.1);
+
+.floating-widget {
+    background-color: $widget-background;
+    border: 1px solid $border-color;
+    &.#{$ns}-dark {
+        background-color: $widget-background-dark;
+        border: 1px solid $border-color-dark;
+    }
+    border-radius: 5px;
+    box-shadow:
+        0 0 0 1px rgba(16, 22, 26, 0.1),
+        0 4px 8px rgba(16, 22, 26, 0.15),
+        0 18px 46px 6px rgba(16, 22, 26, 0.15);
+    margin-bottom: 0px;
+    overflow: hidden;
+    user-select: none;
+
+    .floating-header {
+        width: 100%;
+        height: $title-height;
+        background-color: darken($widget-background, 5%);
+        color: $title-color;
+        border-bottom: 1px solid $border-color;
+        &.#{$ns}-dark {
+            background-color: lighten($widget-background-dark, 10%);
+            border-bottom: 1px solid $border-color-dark;
+        }
+
+        &.selected {
+            background-color: darken($widget-background, 10%);
+            &.#{$ns}-dark {
+                background-color: lighten($widget-background-dark, 15%);
+                border-bottom: 1px solid $border-color-dark;
+            }
+        }
+
+        &.selected {
+            color: $selected-title-color;
+            &.#{$ns}-dark {
+                color: $white;
+            }
+        }
+
+        &.#{$ns}-dark {
+            color: $title-color-dark;
+        }
+
+        display: flex;
+
+        .floating-title {
+            padding-left: 5px;
+            padding-top: 3px;
+            font-size: 14px;
+            cursor: move;
+            flex: 1 1 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .floating-header-button {
+            padding-right: 5px;
+            padding-top: 3px;
+            cursor: pointer;
+            opacity: 0.4;
+            color: black;
+            &.#{$ns}-dark {
+                background-color: lighten($widget-background-dark, 10%);
+                color: white;
+            }
+            &:hover {
+                opacity: 1;
+            }
+        }
+    }
+
+    .floating-content {
+        width: 100%;
+        height: calc(100% - #{$title-height});
+    }
+
+    .floating-settings-content {
+        width: 100%;
+        height: calc(100% - #{$title-height});
+        overflow: auto;
+    }
+}

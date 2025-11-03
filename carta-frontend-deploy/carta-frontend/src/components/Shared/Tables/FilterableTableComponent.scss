@@ -1,0 +1,46 @@
+@import "~@blueprintjs/core/lib/scss/variables.scss";
+
+.#{$ns}-table-header-content .#{$ns}-checkbox {
+    margin: 0 0 0 10px;
+}
+
+.catalog-sort-menu-item {
+    min-width: fit-content !important;
+}
+
+.column-filter-table {
+    &.#{$ns}-dark .#{$ns}-table-selection-region {
+        border: 0px;
+        background-color: rgba(255, 255, 255, 0);
+    }
+
+    .#{$ns}-table-region {
+        border: 0px;
+        background-color: rgba(255, 255, 255, 0);
+    }
+
+    .#{$ns}-table-header.#{$ns}-table-header-selected::before {
+        background-image: none;
+    }
+
+    label.#{$ns}-label .#{$ns}-popover-target {
+        margin-top: 0px;
+    }
+
+    .#{$ns}-popover-target {
+        width: inherit;
+
+        .#{$ns}-input-group {
+            .#{$ns}-input {
+                border-radius: 0px;
+                vertical-align: baseline;
+                box-shadow: none;
+                background: #ffffff00;
+            }
+        }
+    }
+
+    .sort-label .#{$ns}-label {
+        margin-bottom: 0px;
+    }
+}

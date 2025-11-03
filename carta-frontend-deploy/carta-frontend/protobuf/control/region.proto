@@ -1,0 +1,37 @@
+syntax = "proto3";
+package CARTA;
+
+import "defs.proto";
+
+// SET_REGION:
+// Creates or updates a region. Backend responds with SET_REGION_ACK
+message SetRegion {
+    // File slot of the reference image
+    sfixed32 file_id = 1;
+    // Unique region ID. <=0 if a new region is being created.
+    sfixed32 region_id = 2;
+    // Region parameters
+    RegionInfo region_info = 3;
+    // Update region for pv preview only
+    bool preview_region = 4;
+}
+
+
+// SET_REGION_ACK:
+// Response for SET_REGION
+message SetRegionAck {
+    // Defines whether SET_REGION was successful
+    bool success = 1;
+    // Error message (if applicable)
+    string message = 2;
+    // The unique region ID. If the region is updated, this will be the same as the region ID specified in SET_REGION.
+    // If  a new region is being created, the ID of the new region will be passed back.
+    sfixed32 region_id = 3;
+}
+
+// REMOVE_REGION:
+// Removes a region
+message RemoveRegion {
+    // Unique region ID of the region to be removed
+    sfixed32 region_id = 1;
+}

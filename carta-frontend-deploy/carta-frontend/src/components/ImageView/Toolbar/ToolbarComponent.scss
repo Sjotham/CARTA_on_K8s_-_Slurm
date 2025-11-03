@@ -1,0 +1,82 @@
+@import "~@blueprintjs/core/lib/scss/variables.scss";
+
+.image-toolbar {
+    pointer-events: none;
+
+    span {
+        pointer-events: auto;
+    }
+
+    position: absolute;
+    margin: 5px;
+    transition: opacity 400ms;
+
+    flex-wrap: wrap;
+    justify-content: flex-end;
+
+    .#{$ns}-popover-target {
+        flex: none !important;
+    }
+
+    &.docked {
+        z-index: 4;
+    }
+
+    .full-zoom-button {
+        padding-left: 0;
+        padding-right: 0;
+        font-weight: bold;
+        font-size: smaller;
+
+        span {
+            color: $gray1;
+        }
+    }
+
+    .link-button {
+        width: 30px;
+
+        .#{$ns}-button-text {
+            position: absolute;
+            top: 0;
+            left: 16px;
+            font-size: smaller;
+            color: $gray1;
+        }
+
+        .#{$ns}-icon {
+            transform: scale(-1, 1);
+        }
+    }
+
+    &.#{$ns}-dark {
+        .full-zoom-button {
+            .#{$ns}-button-text {
+                color: $gray5;
+            }
+        }
+
+        .link-button {
+            .#{$ns}-button-text {
+                color: $gray5;
+            }
+        }
+    }
+}
+
+.#{$ns}-form-group.offset-group {
+    border: 2px;
+    margin: 0 0 0 5px;
+    .#{$ns}-form-content {
+        display: inline-flex;
+        align-items: center;
+        .#{$ns}-popover-target {
+            margin-left: 5px;
+        }
+    }
+
+    .offset-switch {
+        margin: 0 !important;
+        padding: 6px 0 6px 38px;
+    }
+}

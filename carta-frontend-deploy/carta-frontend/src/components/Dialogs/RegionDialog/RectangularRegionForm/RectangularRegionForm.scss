@@ -1,0 +1,22 @@
+@import "~@blueprintjs/core/lib/scss/variables.scss";
+
+.region-dialog {
+    .#{$ns}-dialog-body {
+        .region-form {
+            .ann-text-input {
+                .#{$ns}-form-content {
+                    max-width: calc(100% - 8em - 10px);
+                }
+
+                .#{$ns}-input {
+                    width: 255px;
+                    height: 60px;
+                    min-width: 125px;
+                    min-height: 30px;
+                    max-width: 100%;
+                    font-family: Arial, Helvetica, sans-serif;
+                }
+            }
+        }
+    }
+}

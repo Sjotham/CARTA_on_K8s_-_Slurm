@@ -1,0 +1,209 @@
+@import "~@blueprintjs/core/lib/scss/variables.scss";
+
+.fitting-dialog {
+    .pinned-input-panel {
+        height: 45px;
+        overflow: visible;
+        margin-top: 20px;
+        margin-bottom: 0px;
+    }
+
+    .#{$ns}-html-select select,
+    .#{$ns}-select select {
+        width: 100%;
+        min-width: 7em;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .SplitPane {
+        position: inherit !important;
+        height: calc(100% - 40px - 65px) !important; // dialog h - heading h - pinned inputs h
+        min-height: calc(100% - 40px - 65px) !important; // dialog h - heading h - pinned inputs h
+
+        .Resizer {
+            background: rgba(0, 0, 0, 0);
+            opacity: 0;
+            z-index: 1;
+            -moz-box-sizing: border-box;
+            -webkit-box-sizing: border-box;
+            box-sizing: border-box;
+            -moz-background-clip: padding;
+            -webkit-background-clip: padding;
+            background-clip: padding-box;
+        }
+        .Resizer.horizontal {
+            height: 15px;
+            border-top: 5px solid rgba(255, 255, 255, 0);
+            border-bottom: 5px solid rgba(255, 255, 255, 0);
+            cursor: row-resize;
+            width: 100%;
+        }
+        .Resizer.disabled {
+            cursor: not-allowed;
+        }
+        .Resizer.disabled:hover {
+            border-color: transparent;
+        }
+
+        .Pane1 {
+            min-height: 65px; // at least show one input column
+            max-height: calc(100% - 15px - 65px); // split pane h - resizer h - pane 2 min h
+            width: 100%;
+            overflow: auto;
+
+            .upper-pane {
+                height: 100%;
+                width: 100%;
+            }
+
+            .unpinned-input-panel {
+                height: calc(100% - 30px - 10px); // pane 1 h - footer h - unpinned inputs bottom margin
+                margin-top: 0;
+                margin-bottom: 10px;
+
+                .#{$ns}-form-group:last-child {
+                    margin-bottom: 0;
+                }
+            }
+
+            .#{$ns}-dialog-footer {
+                margin: 0 15px;
+            }
+        }
+
+        .Pane2 {
+            min-height: 65px; // at least show the two tabs
+            overflow: auto;
+
+            .lower-pane {
+                margin-top: 0;
+                margin-bottom: 0;
+            }
+        }
+    }
+
+    .#{$ns}-label {
+        display: flex;
+        justify-content: flex-end;
+        min-width: 140px;
+        user-select: none;
+
+        .#{$ns}-text-muted {
+            margin-left: 5px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    }
+
+    .#{$ns}-form-content {
+        display: flex;
+        flex-wrap: wrap;
+        width: 100%;
+        user-select: none;
+    }
+
+    .#{$ns}-control-group .#{$ns}-input {
+        width: 125px;
+    }
+
+    .components-input {
+        display: flex;
+        margin-right: 5px;
+
+        .#{$ns}-input {
+            width: 40px;
+        }
+    }
+
+    .components-slider {
+        flex: 1 1 auto;
+        display: flex;
+    }
+
+    .#{$ns}-slider {
+        width: 50%;
+        min-width: 110px;
+        height: 30px;
+        margin-right: 20px;
+
+        .#{$ns}-button {
+            margin-left: 20px;
+        }
+    }
+
+    .coordinate-panel {
+        height: 30px;
+    }
+
+    .lock-button {
+        margin-left: 5px;
+        margin-right: 5px;
+    }
+
+    .info-string {
+        width: 100%;
+        margin-left: 10px;
+        margin-top: 2px;
+        font-size: x-small;
+        font-family: monospace;
+        user-select: text;
+        white-space: nowrap;
+    }
+
+    .#{$ns}-divider {
+        margin: 15px 0 15px 0;
+    }
+
+    .#{$ns}-switch {
+        margin: 7px 10px 0 10px;
+    }
+
+    .output-button {
+        position: absolute;
+        bottom: 25px;
+        right: 25px;
+        margin: 0 0 0 0;
+        transition: opacity 400ms;
+
+        .#{$ns}-button {
+            transition: opacity 400ms;
+            user-select: none;
+        }
+    }
+
+    .fitting-result-panel {
+        .#{$ns}-tabs {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            text-align: left;
+
+            .#{$ns}-tab-list {
+                min-width: 10em;
+            }
+
+            .#{$ns}-tab-panel {
+                width: calc(100% - 140px); // widget width - tab list width
+                height: calc(100% - 15px); // panel height - bottom padding
+                padding-left: 10px;
+
+                .fitting-result-pre {
+                    overflow: auto;
+                    width: 100%;
+                    height: 100%;
+                    user-select: text;
+                    margin: 0;
+
+                    .fitting-result-text {
+                        font-size: 14px;
+                    }
+
+                    .log-text {
+                        font-size: 12px;
+                    }
+                }
+            }
+        }
+    }
+}

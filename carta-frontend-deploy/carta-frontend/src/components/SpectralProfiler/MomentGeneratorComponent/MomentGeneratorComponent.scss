@@ -1,0 +1,67 @@
+@import "~@blueprintjs/core/lib/scss/variables.scss";
+
+.moment-generator {
+    display: block;
+    flex-direction: row;
+
+    .#{$ns}-numeric-input {
+        .#{$ns}-input-group {
+            width: 80px;
+        }
+    }
+
+    .moment-panel {
+        .image-region-select {
+            .#{$ns}-html-select {
+                width: 100%;
+            }
+
+            .label-info {
+                max-width: calc(100% - 92px); // because of the popover, we need the subtraction
+                text-overflow: ellipsis;
+                overflow: hidden;
+                white-space: nowrap;
+                display: inline-block;
+                vertical-align: middle;
+            }
+
+            .region-help {
+                margin-left: 5px;
+            }
+        }
+
+        .range-select {
+            display: flex;
+            flex-direction: row;
+
+            .#{$ns}-form-group {
+                margin: 0px;
+                .#{$ns}-label {
+                    width: 3em;
+                }
+            }
+
+            .cursor-select {
+                display: flex;
+                margin-left: 5px;
+            }
+        }
+
+        .moment-generate {
+            float: right;
+        }
+
+        .freq-input {
+            display: flex;
+            flex-direction: row;
+
+            .#{$ns}-form-group {
+                margin-right: 10px;
+                .#{$ns}-input-group {
+                    min-width: 130px;
+                    width: 130px;
+                }
+            }
+        }
+    }
+}

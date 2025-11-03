@@ -1,0 +1,26 @@
+@import "~@blueprintjs/core/lib/scss/variables.scss";
+
+.cursor-info-widget {
+    width: 100%;
+    height: 100%;
+    user-select: none;
+    padding: 5px;
+
+    .#{$ns}-table-column-name {
+        font-size: 12px;
+        font-weight: bold;
+    }
+
+    .#{$ns}-table-row-headers .#{$ns}-table-header {
+        display: flex;
+        align-items: center;
+    }
+
+    .#{$ns}-table-cell {
+        display: flex;
+        align-items: center;
+        padding: 5px;
+        line-height: 15px;
+        user-select: text;
+    }
+}

@@ -1,0 +1,56 @@
+@import "~@blueprintjs/core/lib/scss/variables.scss";
+
+.code-snippet-dialog {
+    user-select: none;
+
+    .#{$ns}-dialog-body {
+        background: $white;
+    }
+
+    .#{$ns}-dialog-footer {
+        display: flex;
+
+        .spacer {
+            flex-grow: 1;
+        }
+    }
+
+    &.#{$ns}-dark {
+        .#{$ns}-dialog-body {
+            background: $dark-gray1;
+        }
+    }
+
+    .input-text {
+        margin-left: 5px;
+        margin-right: 5px;
+        margin-top: 5px;
+    }
+
+    .#{$ns}-input-group {
+        margin-bottom: 10px;
+    }
+
+    // Line number CSS adapted from https://github.com/satya164/react-simple-code-editor/issues/16
+    .line-numbers {
+        counter-reset: line;
+
+        #codeArea {
+            outline: none;
+            padding-left: 40px !important;
+        }
+
+        pre {
+            padding-left: 40px !important;
+        }
+
+        .editor-line-number {
+            position: absolute;
+            left: 0;
+            color: #cccccc;
+            text-align: right;
+            width: 30px;
+            font-weight: 100;
+        }
+    }
+}

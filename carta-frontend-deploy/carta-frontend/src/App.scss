@@ -1,0 +1,76 @@
+@import "~@blueprintjs/core/lib/scss/variables.scss";
+
+.#{$ns}-dark {
+    background-color: $dark-gray4;
+}
+
+body {
+    &.#{$ns}-dark {
+        background-color: $dark-gray4;
+    }
+}
+
+// TODO: Determine if the hard-coded z-index settings can be reduced or removed
+.App {
+    height: 100%;
+    width: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: -100;
+    user-select: none;
+    .#{$ns}-dark {
+        background-color: $pt-dark-app-background-color;
+    }
+}
+
+.gl-container-app {
+    position: absolute;
+    top: 48px;
+    bottom: 5px;
+    left: 5px;
+    right: 5px;
+    z-index: -100;
+}
+
+.minimal-dialog-backdrop {
+    background-color: rgba(black, 0.1) !important;
+}
+
+.#{$ns}-overlay {
+    z-index: 995 !important;
+}
+
+.#{$ns}-popover {
+    z-index: 995 !important;
+}
+
+.#{$ns}-transition-container {
+    z-index: 995 !important;
+}
+
+.#{$ns}-dialog.#{$ns}-alert {
+    z-index: 999 !important;
+}
+
+.dialog-portal {
+    z-index: 990 !important;
+}
+
+// Workaround for BlueprintJS bug
+.#{$ns}-dark .#{$ns}-button-group:not(.#{$ns}-minimal) > .#{$ns}-popover-wrapper:not(:last-child) .#{$ns}-button,
+.#{$ns}-dark .#{$ns}-button-group:not(.#{$ns}-minimal) > .#{$ns}-button:not(:last-child) {
+    margin-right: -1px !important;
+}
+
+// overwrite blueprint table dark theme background to the widget background
+.#{$ns}-dark .#{$ns}-table-quadrant {
+    background-color: $pt-dark-app-background-color !important;
+}
+
+// hide plotly tips
+body {
+    div.plotly-notifier {
+        visibility: hidden;
+    }
+}

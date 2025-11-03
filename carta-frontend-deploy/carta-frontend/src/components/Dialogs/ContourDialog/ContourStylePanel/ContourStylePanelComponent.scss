@@ -1,0 +1,8 @@
+@import "~@blueprintjs/core/lib/scss/variables.scss";
+
+.contour-style-panel {
+    .#{$ns}-label {
+        width: 6em;
+        text-align: right;
+    }
+}

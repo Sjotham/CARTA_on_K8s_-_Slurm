@@ -1,0 +1,319 @@
+syntax = "proto3";
+package CARTA;
+
+import "enums.proto";
+
+//
+// Utility definitions and sub-messages for the Control package
+//
+
+message Point {
+    float x = 1;
+    float y = 2;
+}
+
+message DoublePoint {
+    double x = 1;
+    double y = 2;
+}
+
+// File info message structure, sub-message of FileListResponse
+message FileInfo {
+    // File name
+    string name = 1;
+    // File type. This field may be unused (and set to UNKNOWN) if FileListFilterMode is AllFiles
+    FileType type = 2;
+    // File size
+    sfixed64 size = 3;
+    // HDU list
+    repeated string HDU_list = 4;
+    // Modification date
+    sfixed64 date = 5;
+}
+
+// Directory info message structure, sub-message of FileListResponse
+message DirectoryInfo {
+    // Directory name
+    string name = 1;
+    // Number of items in the directory. This field is always unused (and left as zero) if FileListFilterMode is AllFiles.
+    sfixed32 item_count = 2;
+    // Modification date
+    sfixed64 date = 3;
+}
+
+message FileInfoExtended {
+    // Number of dimensions of the image file
+    sfixed32 dimensions = 1;
+    // Width of the XY plane
+    sfixed32 width = 2;
+    // Height of the XY plane
+    sfixed32 height = 3;
+    // Number of channels
+    sfixed32 depth = 4;
+    // Number of Stokes parameters
+    sfixed32 stokes = 5;
+    // List of Stokes parameters contained in the file (if applicable). For files that do not explicitly specify Stokes files, this will be blank.
+    repeated string stokes_vals = 6;
+    // Header entries from header string or attributes
+    repeated HeaderEntry header_entries = 7;
+    repeated HeaderEntry computed_entries = 8;
+    // Axes numbers for directions, spectral, and stokes
+    AxesNumbers axes_numbers = 9;
+}
+
+message HeaderEntry {
+    string name = 1;
+    string value = 2;
+    EntryType entry_type = 3;
+    double numeric_value = 4;
+    string comment = 5;
+}
+
+message AxesNumbers {
+    // Spatial X axis number
+    sfixed32 spatial_x = 1;
+    // Spatial Y axis number
+    sfixed32 spatial_y = 2;
+    // Spectral axis number
+    sfixed32 spectral = 3;
+    // Stokes axis number
+    sfixed32 stokes = 4;
+    // Depth axis is non-render axis that is not stokes (if any)
+    sfixed32 depth = 5;
+}
+
+message IntBounds {
+    sfixed32 min = 1;
+    sfixed32 max = 2;
+}
+
+message FloatBounds {
+    float min = 1;
+    float max = 2;
+}
+
+message DoubleBounds {
+    double min = 1;
+    double max = 2;
+}
+
+message ImageBounds {
+    sfixed32 x_min = 1;
+    sfixed32 x_max = 2;
+    sfixed32 y_min = 3;
+    sfixed32 y_max = 4;
+}
+
+message AnimationFrame {
+    sfixed32 channel = 1;
+    sfixed32 stokes = 2;
+}
+
+message SpatialProfile {
+    sfixed32 start = 1;
+    sfixed32 end = 2;
+    bytes raw_values_fp32 = 3;
+    string coordinate = 4;
+    sfixed32 mip = 5;
+    LineProfileAxis line_axis = 6;
+}
+
+message LineProfileAxis {
+    ProfileAxisType axis_type = 1;
+    float crpix = 2;
+    float crval = 3;
+    float cdelt = 4;
+    string unit = 5;
+}
+
+message SpectralProfile {
+    string coordinate = 1;
+    StatsType stats_type = 2;
+    bytes raw_values_fp32 = 3;
+    bytes raw_values_fp64 = 4;
+}
+
+message StatisticsValue {
+    StatsType stats_type = 1;
+    double value = 2;
+}
+
+message Histogram {
+    sfixed32 num_bins = 1;
+    double bin_width = 2;
+    double first_bin_center = 3;
+    repeated sfixed32 bins = 4;
+    double mean = 5;
+    double std_dev = 6;
+}
+
+message HistogramConfig {
+    string coordinate = 1;
+    sfixed32 channel = 2;
+    bool fixed_num_bins = 3;
+    sfixed32 num_bins = 4;
+    bool fixed_bounds = 5;
+    DoubleBounds bounds = 6;
+}
+
+message RegionInfo {
+    // The type of region described by the control points. The meaning of the control points will differ,
+    // depending on the type of region being defined.
+    RegionType region_type = 1;
+    // Control points for the region
+    repeated Point control_points = 2;
+    // (Only applicable for ellipse and rectangle) Rotation of the region in the xy plane (radians).
+    float rotation = 3;
+}
+
+message RegionStyle {
+    // The name of the region, displayed as an annotation label.
+    string name = 1;
+    // Color as a name ("blue"), RGB string, or hex string
+    string color = 2;
+    // Width in pixels
+    sfixed32 line_width = 3;
+    // Dash length: on, off
+    repeated sfixed32 dash_list = 4;
+    // Annotation Styles
+    AnnotationStyle annotation_style = 5;
+}
+
+message AnnotationStyle {
+    // Point annotation shape
+    PointAnnotationShape point_shape = 1;
+    // Point annotation width
+    sfixed32 point_width = 2;
+    // Text annotation text / Compass annotation north label
+    string text_label0 = 3;
+    // Compass annotation east label
+    string text_label1 = 4;
+    // Compass and Ruler coordinate sytem
+    string coordinate_system = 5;
+    // Compass annotation north arrowhead
+    bool is_north_arrow = 6;
+    // Compass annotation east arrowhead
+    bool is_east_arrow = 7;
+    // Text annotation position
+    TextAnnotationPosition text_position = 8;
+    // Font style (bold, italic, bold_italic)
+    string font_style = 9;
+    // Font (Times / Helvetica / Courier)
+    string font = 10;
+    // Font size for Text, Compass, Ruler
+    sfixed32 font_size = 11;
+}
+
+message CatalogFileInfo {
+    string name = 1;
+    CatalogFileType type = 2;
+    sfixed64 file_size = 3;
+    string description = 4;
+    repeated Coosys coosys = 5;
+    sfixed64 date = 6;
+}
+
+message Coosys {
+    string equinox = 1;
+    string epoch = 2;
+    string system = 3;
+}
+
+message CatalogHeader {
+    string name = 1;
+    ColumnType data_type = 2;
+    sfixed32 column_index = 3;
+    string description = 5;
+    string units = 6;
+}
+
+message ColumnData {
+    ColumnType data_type = 1;
+    // All data types other than string sent as binary
+    repeated string string_data = 2;
+    // binary data will get converted to a TypedArray
+    bytes binary_data = 3;
+}
+
+message FilterConfig {
+    string column_name = 1;
+    ComparisonOperator comparison_operator = 2;
+    double value = 3;
+    double secondary_value = 4;
+    string sub_string = 5;
+}
+
+message CatalogImageBounds {
+    string x_column_name = 1;
+    string y_column_name = 2;
+    ImageBounds image_bounds = 3;
+}
+
+message MatchedFrameList {
+    repeated float frame_numbers = 1;
+}
+
+// describe each beam for multi-beam images
+message Beam {
+    sfixed32 channel = 1;
+    sfixed32 stokes = 2;
+    float major_axis = 3;
+    float minor_axis = 4;
+    float pa = 5;
+}
+
+message ListProgress {
+    FileListType file_list_type = 1;
+    float percentage = 2;
+    sfixed32 checked_count = 3;
+    sfixed32 total_count = 4;
+}
+
+message TileData {
+  // Tile layer coordinate. If this is < 0, the ``mip`` value is used for coordinates instead
+  sfixed32 layer = 1;
+  // Tile x coordinate
+  sfixed32 x = 2;
+  // Tile y coordinate
+  sfixed32 y = 3;
+  // Width of the tile data. If this is left as zero, the default tile size should be used
+  sfixed32 width = 4;
+  // Height of the tile data. If this is left as zero, the default tile size should be used
+  sfixed32 height = 5;
+  // Image data. For uncompressed data, this is converted into FP32, while for compressed data,
+  // this is passed to the compression library for decompression.
+  bytes image_data = 6;
+  // Run-length encodings of NaN values. These values are used to restore the NaN values after decompression.
+  bytes nan_encodings = 7;
+  // Mip coordinate. Ignored if ``layer`` >= 0
+  sfixed32 mip = 8;
+}
+
+// parameters of a 2D Gaussian component for image fitting
+message GaussianComponent {
+    // x/y coordinate of the center in pixels
+    DoublePoint center = 1;
+    // amplitude of the component
+    double amp = 2;
+    // full width at half maximum along x/y coordinate in pixels
+    DoublePoint fwhm = 3;
+    // position angle in degrees
+    double pa = 4;
+}
+
+// Preview parameters of a PV_REQUEST
+message PvPreviewSettings {
+    // Preview ID for the PV preview viewer
+    sfixed32 preview_id = 1;
+    // Region ID for the subimage in the xy plane
+    sfixed32 region_id = 2;
+    // Downsampling in xy axes
+    sfixed32 rebin_xy = 3;
+    // Downsampling in z axis
+    sfixed32 rebin_z = 4;
+    // The compression algorithm to use
+    CompressionType compression_type = 5;
+    // Compression quality from frontend performance preferences
+    float image_compression_quality = 6;
+    float animation_compression_quality = 7;
+}
