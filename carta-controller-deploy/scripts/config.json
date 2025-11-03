@@ -1,0 +1,30 @@
+{
+    "$schema": "https://cartavis.org/schemas/controller_config_schema_2.json",
+//    "authProviders": {
+//        "pam": {
+//            "publicKeyLocation": "/etc/carta/carta_public.pem",
+//            "privateKeyLocation": "/etc/carta/carta_private.pem",
+//            "issuer": "carta.example.com"
+//        }
+// 
+  },
+    "noAuth": true
+    "database": {
+        "uri": "mongodb://localhost:27017",
+        "databaseName": "CARTA"
+    },
+    "serverPort": 8000,
+    "serverInterface": "0.0.0.0",
+    "processCommand": "/usr/bin/carta_backend",
+    "killCommand": "/usr/bin/carta-kill-script",
+    "rootFolderTemplate": "/images",
+    "baseFolderTemplate": "/home/{username}",
+    "dashboard": {
+        "bannerColor": "#d2dce5",
+        "backgroundColor": "#f6f8fa",
+        "infoText": "Welcome to the CARTA server.",
+        "loginText": "<span>Please enter your login credentials:</span>",
+        "footerText": "<span>If you have any problems, comments or suggestions, please <a href='mailto:admin@carta.example.com'>contact us.</a></span>"
+    }
+}
+                                    
