@@ -182,7 +182,7 @@ sudo chown carta: /var/run/carta
 # Start controller in background (as carta)
 echo "Starting CARTA controller..."
 sudo -u carta -H env APP_DIR="$APP_DIR" bash -lc '
-  cd /var/lib/carta/carta-controller
+  cd /var/lib/carta/carta-controller-v2
   npm install --no-audit --no-fund --progress=false
   nohup npm run start >/var/log/carta/controller.out 2>&1 &
   echo $! > /var/run/carta/controller.pid

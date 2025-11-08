@@ -13,7 +13,7 @@ export type ProxyTarget = {
 };
 
 export type SpawnStatus =
-  | { running: false; ready: false }
+  | { running: false; ready: false; }
   | { running: true; ready: boolean; target?: ProxyTarget };
 
 export type SpawnResult = {

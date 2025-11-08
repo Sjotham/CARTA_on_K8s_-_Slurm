@@ -73,7 +73,12 @@ export class LocalSpawner implements Spawner {
       if (info && !(await this._waitForAccept(info.port, this.cfg.startDelayMs))) return { success:false };
       if (info) info.ready = true;
     }
-    return { success:true, target: (await this.status(username)).target };
+
+    const s = await this.status(username);
+    if (!s.running)
+      return { success: false, target: undefined };
+    
+    return { success: true, target: s.target };
   }
 
   // internals
