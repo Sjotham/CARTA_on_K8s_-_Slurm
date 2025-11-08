@@ -24,6 +24,7 @@
     "author": "",
     "license": "GPLV3",
     "dependencies": {
+        "@kubernetes/client-node": "^0.22.0",
         "@pm2/io": "^6.1.0",
         "ajv": "^8.17.1",
         "ajv-formats": "^3.0.1",
@@ -59,6 +60,7 @@
         "yargs": "^17.0.1"
     },
     "devDependencies": {
+        "@kubernetes/client-node": "^0.22.0",
         "@biomejs/biome": "2.1.4",
         "@types/compression": "^1.7.0",
         "@types/cookie-parser": "^1.4.8",
