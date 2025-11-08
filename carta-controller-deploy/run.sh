@@ -41,40 +41,16 @@ sudo apt-get install carta-backend "${APT_OPTS[@]}"
 # Install additional packages
 sudo apt-get install g++ make build-essential libpam0g-dev "${APT_OPTS[@]}"
 
-# --------------------------------------------------------------------------------
-# Node.js setup (Option A): use nvm to install Node 20 LTS (fallback to Node 18 LTS)
-# This avoids Node 24's ABI (node-v137) which breaks node-linux-pam builds.
-# --------------------------------------------------------------------------------
-install_nvm_and_node() {
-  local target_user="$1"
-  local node_major="${2:-20}"
-  local fallback_major="${3:-18}"
+# Install Node.js v22.x (current LTS) from NodeSource
+# https://github.com/nodesource/distributions
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
 
-  local user_home
-  user_home=$(eval echo "~${target_user}")
+# Install Node.js (includes NPM)
+sudo apt-get install -yq nodejs
 
-  if [ ! -s "${user_home}/.nvm/nvm.sh" ]; then
-    sudo -H -u "${target_user}" bash -lc 'curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash'
-  fi
-
-  sudo -H -u "${target_user}" bash -lc "
-    export NVM_DIR=\"\$HOME/.nvm\"
-    . \"\$NVM_DIR/nvm.sh\"
-    nvm install ${node_major} || true
-    if ! nvm ls ${node_major} >/dev/null 2>&1; then
-      nvm install ${fallback_major}
-      nvm alias default ${fallback_major}
-    else
-      nvm alias default ${node_major}
-    fi
-    nvm use default
-    node -v
-    npm -v
-  "
-}
-
-TARGET_USER="${SUDO_USER:-$USER}"
-install_nvm_and_node "${TARGET_USER}" 20 18
+# https://carta-controller.readthedocs.io/en/dev/step_by_step.html#install-carta-controller
+# Install carta-controller (includes frontend dependency)
+sudo npm install -g --unsafe-perm carta-controller
 
 # https://carta-controller.readthedocs.io/en/dev/step_by_step.html#set-up-users-and-directories
 # Create a group to identify CARTA users
@@ -84,9 +60,6 @@ sudo groupadd -f carta-users
 if ! id -u carta &>/dev/null; then
   sudo useradd --system --create-home --home /var/lib/carta --shell=/bin/bash --user-group carta
 fi
-
-# Ensure nvm + Node LTS is installed for the 'carta' user as well
-install_nvm_and_node "carta" 20 18
 
 # Create a log directory owned by carta
 sudo mkdir -p /var/log/carta
@@ -129,71 +102,88 @@ sudo apt-get install nginx "${APT_OPTS[@]}"
 
 # Generate private/public keys
 if [ ! -f /etc/carta/carta_private.pem ]; then
-  sudo openssl genrsa -out /etc/carta/carta_private.pem 4096
+  sudo -u carta -H bash -lc "
+    openssl genrsa -out /etc/carta/carta_private.pem 4096
+    openssl rsa -in /etc/carta/carta_private.pem -outform PEM -pubout -out /etc/carta/carta_public.pem
+  "
 fi
-sudo openssl rsa -in /etc/carta/carta_private.pem -outform PEM -pubout -out /etc/carta/carta_public.pem
 
 sudo mkdir -p /etc/carta
 if [ -f scripts/config.json ]; then
-  sudo cp scripts/config.json /etc/carta
+  sudo -u carta -H bash -lc "
+    cp scripts/config.json /etc/carta
+  "
 fi
 
-# https://carta-controller.readthedocs.io/en/dev/step_by_step.html#start-carta-controller
-# Switch back to user with sudo access
-# (no-op)
+# https://carta-controller.readthedocs.io/en/dev/step_by_step.html#test-carta-controller
+# Create a test user in the 'carta-users' group
+if ! id -u alice &>/dev/null; then
+  sudo useradd --create-home --groups carta-users alice
+  sudo passwd alice
+fi
 
-# Copy test image to user's home directory
-TARGET_USER="${SUDO_USER:-$USER}"
-sudo cp /usr/share/carta/default.fits /home/$TARGET_USER/test.fits || true
-sudo chown $TARGET_USER: /home/$TARGET_USER/test.fits || true
+# # Copy test image to user's home directory
+# sudo -u carta -H bash -lc "
+#  cp /usr/share/carta/default.fits /home/alice/test.fits || true
+#  chown alice /home/alice/test.fits || true
+# "
 
 # --------------------------------------------------------------------------------
 # Run controller from carta's home to avoid permission issues
 # --------------------------------------------------------------------------------
 APP_DIR="/var/lib/carta/carta-controller"
 
-# Clone/update the repo as carta (keeps ownership/permissions correct)
-if [ ! -d "${APP_DIR}" ]; then
+# Make sure the parent directory exists
+sudo mkdir -p "${APP_DIR}"
+# Ensure carta owns everything under that directory
+sudo chown -R carta: "${APP_DIR}"
+
+# If the repo doesn't exist yet, clone it
+if [ ! -d "${APP_DIR}/.git" ]; then
   echo "Cloning CARTA controller into ${APP_DIR}..."
   sudo -u carta -H bash -lc "
-    mkdir -p /var/lib/carta
-    cd /var/lib/carta
-    git clone --recursive https://github.com/CARTAvis/carta-controller.git
-  "
-else
-  echo "Updating CARTA controller repo in ${APP_DIR}..."
-  sudo -u carta -H bash -lc "
-    cd ${APP_DIR}
-    git fetch --all --tags
-    git pull --rebase --autostash || true
-    git submodule update --init --recursive
+    cd $(dirname "${APP_DIR}")
+    git clone --recursive https://github.com/CARTAvis/carta-controller.git $(basename "${APP_DIR}")
   "
 fi
 
-# Ensure submodules initialized (idempotent)
-sudo -u carta -H bash -lc "
-  cd ${APP_DIR}
-  git submodule update --init --recursive
-"
 
-# Install dependencies for controller using carta's Node LTS (via nvm)
-echo "Installing CARTA controller dependencies (as carta)..."
-sudo -u carta -H bash -lc '
-  export NVM_DIR="$HOME/.nvm"
-  . "$NVM_DIR/nvm.sh"
-  nvm use default >/dev/null
-  cd /var/lib/carta/carta-controller
-  node -v
-  npm -v
-  npm install --no-audit --no-fund --progress=false
+
+sudo -u carta -H env APP_DIR="$APP_DIR" bash -lc '
+  set -e
+  mkdir -p /var/lib/carta
+
+  if [ ! -d "$APP_DIR" ]; then
+    echo "Cloning CARTA controller into $APP_DIR..."
+    cd /var/lib/carta
+    # Make sure carta owns the repo
+    git clone --recursive https://github.com/CARTAvis/carta-controller.git "$(basename "$APP_DIR")"
+  elif [ -d "$APP_DIR/.git" ]; then
+    echo "Updating CARTA controller repo in $APP_DIR..."
+    cd "$APP_DIR"
+    git fetch --all --tags
+    git pull --rebase --autostash || true
+  else
+    echo "Warning: $APP_DIR exists but is not a git repo. Skipping clone and update."
+  fi
+
+  # Ensure submodules initialized (idempotent)
+  if [ -d "$APP_DIR/.git" ]; then
+    cd "$APP_DIR"
+    git submodule update --init --recursive
+  fi
 '
+
+# Ensure the PID dir is owned by carta (recommended)
+sudo mkdir -p /var/run/carta
+sudo chown carta: /var/run/carta
+
 
 # Start controller in background (as carta)
 echo "Starting CARTA controller..."
-sudo -u carta -H bash -lc '
-  export NVM_DIR="$HOME/.nvm"
-  . "$NVM_DIR/nvm.sh"
-  nvm use default >/dev/null
+sudo -u carta -H env APP_DIR="$APP_DIR" bash -lc '
   cd /var/lib/carta/carta-controller
-  nohup npm run start >/var/log/carta/controller.out 2>&1 & disown
+  npm install --no-audit --no-fund --progress=false
+  nohup npm run start >/var/log/carta/controller.out 2>&1 &
+  echo $! > /var/run/carta/controller.pid
 '

@@ -41,7 +41,7 @@ export class K8sSpawner implements Spawner {
     pfReq?: http.ClientRequest;
     pfStream?: stream.Duplex;
   }>();
-  private logs = new Map<string, LinkedList<string>>();
+  private logs_ = new Map<string, LinkedList<string>>();
   private static readonly LOG_LIMIT = 1000;
 
   constructor(cfg: {
@@ -133,7 +133,7 @@ export class K8sSpawner implements Spawner {
   }
 
   async logs(username: string, tail?: number) {
-    const list = this.logs.get(username);
+    const list = this.logs_.get(username);
     if (!list?.size) return { success:false };
     if (!tail || tail >= list.size) return { success:true, log:list.toArray().join("") };
     const out:string[]=[]; let skip=list.size-tail; for(const ln of list){ if(skip-- > 0) continue; out.push(ln); }
@@ -278,7 +278,7 @@ export class K8sSpawner implements Spawner {
   }
 
   private async tailLogs(username: string, podName: string) {
-    const list = new LinkedList<string>(); this.logs.set(username, list);
+    const list = new LinkedList<string>(); this.logs_.set(username, list);
     const push = (s: string) => { while (list.size >= K8sSpawner.LOG_LIMIT) list.shift(); list.push(s); };
     const pass = new stream.PassThrough();
     pass.on("data", c => push(c.toString("utf8"))); pass.on("error", ()=>{}); pass.on("close", ()=>{});

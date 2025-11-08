@@ -5,25 +5,51 @@ set -e  # Exit if any command fails
 
 sudo apt-get update
 
-sudo apt-get install cmake nodejs npm -y
+# Install Node.js v22.x (current LTS) from NodeSource
+# https://github.com/nodesource/distributions
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt-get install -yq nodejs
 
-git clone https://github.com/emscripten-core/emsdk.git
 
-# Enter that directory
+echo "Installing cmake"
+sudo apt-get install cmake  -y
+
+# ------------------------------------------------------------------------------
+# Install or update Emscripten SDK (emsdk) safely and idempotently
+# ------------------------------------------------------------------------------
+
+# Clone or update emsdk
+if [ ! -d "emsdk" ]; then
+  echo "Cloning emsdk repository..."
+  git clone https://github.com/emscripten-core/emsdk.git
+else
+  echo "Updating existing emsdk repository..."
+  cd emsdk
+  git fetch --all --tags
+  git pull --rebase --autostash || true
+  cd ..
+fi
+
+# Enter emsdk directory
 cd emsdk
 
-# Fetch the latest version of the emsdk (not needed the first time you clone)
-git pull
+# Install the latest SDK tools (only if not already installed)
+if ! ./emsdk list | grep -q '\* latest'; then
+  echo "Installing latest emsdk..."
+  ./emsdk install latest
+else
+  echo "emsdk 'latest' is already installed."
+fi
 
-# Download and install the latest SDK tools.
-./emsdk install latest
-
-# Make the "latest" SDK "active" for the current user. (writes .emscripten file)
+# Activate the latest SDK for the current user (safe to re-run)
+echo "Activating latest emsdk..."
 ./emsdk activate latest
 
-# Activate PATH and other environment variables in the current terminal
+# Source environment variables for the current shell
+echo "Activating emsdk environment..."
 source ./emsdk_env.sh
 
+# Return to previous directory
 cd ..
 
 # Clone the repositories (skip if already cloned)
@@ -33,8 +59,8 @@ if [ ! -d "carta-frontend" ]; then
 fi
 
 # Go back and start frontend
+
 cd carta-frontend
-git submodule update --init --recursive
 npm install
 
 npx --yes update-browserslist-db@latest

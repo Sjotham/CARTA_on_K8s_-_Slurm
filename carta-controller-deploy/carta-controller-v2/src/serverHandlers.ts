@@ -11,22 +11,36 @@ import { authGuard, getUser, verifyToken } from "./auth";
 import { ServerConfig } from "./config";
 import { logger, noCache, delay } from "./util";
 
-import type { Spawner} from "./spawner/spawner";
-import type { LocalSpawner } from "./spawner/local-spawner";
-import type { K8sSpawner } from "./spawner/k8s-spawner"; 
+import { Spawner} from "./spawner/spawner";
+import { LocalSpawner } from "./spawner/local-spawner";
+// import { K8sSpawner } from "./spawner/k8s-spawner"; 
 
 // -------------------- Spawner wiring --------------------
 
 // Choose which spawner to use. You can switch this with a config flag.
-const spawner: Spawner = ServerConfig.backendMode === "k8s"
-  ? new K8sSpawner({
-      kubeconfigPath: ServerConfig.kubeconfigPath, // mount your kubeconfig secret to this path
-      startDelayMs: ServerConfig.startDelay,
-      localPortRange: ServerConfig.backendPorts,   // reuse same shape {min,max}
-      logger,
-      delay,
-    })
-  : new LocalSpawner({
+// const spawner: Spawner = ServerConfig.backendMode === "k8s"
+//   ? new K8sSpawner({
+//       kubeconfigPath: ServerConfig.kubeconfigPath, // mount your kubeconfig secret to this path
+//       startDelayMs: ServerConfig.startDelay,
+//       localPortRange: ServerConfig.backendPorts,   // reuse same shape {min,max}
+//       logger,
+//       delay,
+//     })
+//   : new LocalSpawner({
+//       backendPorts: ServerConfig.backendPorts,
+//       processCommand: ServerConfig.processCommand,
+//       preserveEnv: ServerConfig.preserveEnv,
+//       additionalArgs: ServerConfig.additionalArgs,
+//       baseFolderTemplate: ServerConfig.baseFolderTemplate,
+//       rootFolderTemplate: ServerConfig.rootFolderTemplate,
+//       backendLogFileTemplate: ServerConfig.backendLogFileTemplate,
+//       startDelayMs: ServerConfig.startDelay,
+//       killCommand: ServerConfig.killCommand,
+//       logger,
+//       delay,
+//     });
+
+    const spawner: Spawner = new LocalSpawner({
       backendPorts: ServerConfig.backendPorts,
       processCommand: ServerConfig.processCommand,
       preserveEnv: ServerConfig.preserveEnv,
