@@ -149,7 +149,7 @@ fi
 
 
 
-sudo -u carta -H env APP_DIR="$APP_DIR" bash -lc '
+sudo -u carta bash -lc '
   set -e
   mkdir -p /var/lib/carta
 
@@ -157,7 +157,7 @@ sudo -u carta -H env APP_DIR="$APP_DIR" bash -lc '
     echo "Cloning CARTA controller into $APP_DIR..."
     cd /var/lib/carta
     # Make sure carta owns the repo
-    git clone --recursive https://github.com/CARTAvis/carta-controller.git "$(basename "$APP_DIR")"
+    git clone --recursive https://github.com/CARTAvis/carta-controller.git "$(basename "$APP_DIR")" -branch -branch k8s-slurm-comparison
   elif [ -d "$APP_DIR/.git" ]; then
     echo "Updating CARTA controller repo in $APP_DIR..."
     cd "$APP_DIR"
@@ -181,9 +181,12 @@ sudo chown carta: /var/run/carta
 
 # Start controller in background (as carta)
 echo "Starting CARTA controller..."
-sudo -u carta -H env APP_DIR="$APP_DIR" bash -lc '
+sudo -u carta bash -lc '
   cd /var/lib/carta/carta-controller-v2
   npm install --no-audit --no-fund --progress=false
-  nohup npm run start >/var/log/carta/controller.out 2>&1 &
+  # nohup npm run start -- --verbose --test alice >/var/log/carta/controller.out 2>&1 &
+  # npx ts-node src/index.ts --verbose --test alice
+  CARTA_PASSWORD='alice_pw' npx ts-node src/index.ts --verbose --test alice
   echo $! > /var/run/carta/controller.pid
 '
+
