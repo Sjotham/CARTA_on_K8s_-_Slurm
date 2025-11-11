@@ -1,1 +1,5 @@
-This repository contains multiple folders. Its main objective is to compare two deployments methods: thats Kubernetes and HPC using Slurm as resource manager. We are using Cube Analysis and Rendering Tool for Astronomy (CARTA) as our interactive application. So, here we have slurm configuration file because for hpc we need to set up slurm first, fake server since we wanted to do some little deployment with a dump server to see how kubespawner works and carta installation here we were installing carta in a local machine.
+This repository contains two deployments systems on deploying interactive applications, using the Cube Analysis and Rendering Tool for Astronomy (CARTA) as the use case. We compare the use of Kubernetes as an orchestration framework and Slurm as a resource manager in HPC environment. The objective is to find the best deployment system for interactive applications. For each deployment method we going to list the scripts that needs to be executed.
+Deploment method
+* Kubernetes Deployment 
+* SLURM deployment
+* Local deployment

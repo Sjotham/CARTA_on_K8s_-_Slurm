@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: carta-backend-c
-  namespace: carta
+  namespace: carta1
   labels: { app: carta-backend, instance: c }
 spec:
   replicas: 1
@@ -32,13 +32,13 @@ spec:
       volumes:
         - name: carta-storage
           persistentVolumeClaim:
-            claimName: carta-data
+            claimName: carta1-data
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: carta-backend-c
-  namespace: carta
+  namespace: carta1
 spec:
   type: NodePort
   selector: { app: carta-backend, instance: c }
@@ -46,4 +46,4 @@ spec:
     - name: tcp
       port: 3002
       targetPort: 3002
-      nodePort: 32022
+    #  nodePort: 32022
