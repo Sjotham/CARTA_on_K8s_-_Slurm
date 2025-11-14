@@ -16,8 +16,8 @@ DEFAULT_PORT=3002
 
 # Slurm settings
 PARTITION="${PARTITION:-}"     # e.g. "compute" or leave empty for default
-CPUS_PER_TASK="${CPUS_PER_TASK:-4}"
-MEM_PER_TASK="${MEM_PER_TASK:-4G}"
+CPUS_PER_TASK="${CPUS_PER_TASK:-2}"
+MEM_PER_TASK="${MEM_PER_TASK:-2G}"
 TIME_LIMIT="${TIME_LIMIT:-02:00:00}"   # hh:mm:ss
 ACCOUNT="${ACCOUNT:-}"         # if your cluster requires --account
 NODELIST="${NODELIST:-}"       # e.g. "vm2" if you want a specific node

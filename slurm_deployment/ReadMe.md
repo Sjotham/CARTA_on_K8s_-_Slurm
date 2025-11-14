@@ -1,4 +1,3 @@
 Slurm is used as resource manager on HPC clusters. The scripts are met for different nodes in an HPC cluster, the login-Node.sh is installed on the login node where slurmctld run that manages the cluster, then compute-nodes.sh install surmd on compute nodes. we also need to verity that the compute nodes can ping the control node (login node), we use the scontrol ping command to ping control node. The diagram below shows the architecture diagram for CARTA on an HPC cluster, the frontend runs on the browser, the backend is spawned by the controller on the login node and deployed on one of the compute node. The CephFS shared distributed file system is mounted on all the nodes.
 
 
-<img width="736" height="527" alt="big" src="https://github.com/user-attachments/assets/194fc6ad-0ed5-4f19-a1f5-13870160cfae" />
