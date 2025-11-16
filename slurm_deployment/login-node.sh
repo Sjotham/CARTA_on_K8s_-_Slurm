@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+#https://www.youtube.com/watch?v=1Yv3QQTv7PI&list=PLWk-zl-RHnbc8PS55ZiJHFtPTQobegyH5
 
 #############################################
 # CONFIG SECTION – EDIT FOR YOUR CLUSTER    #
