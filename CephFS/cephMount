@@ -1,0 +1,42 @@
+ip a
+see the ens number
+
+create file /etc/netplan/ceph.yaml
+
+network:
+    version: 2
+    ethernets:
+        ens4:
+            dhcp4: true
+        ens5:
+            dhcp4: true
+        ens6:
+            dhcp4: true
+        ens7:
+            dhcp4: true
+        ens8:
+            dhcp4: true
+        ens9:
+            dhcp4: true
+        ens10:
+            dhcp4: true
+        ens11:
+            dhcp4: true
+            
+apt install -y ceph-common
+
+edit /etc/ceph/ceph.conf and leave as is:
+[global]
+fsid = 3f5452e1-ff5d-4a41-9e8d-5a3467036771
+mon host = [v2:10.102.36.3:3300,v1:10.102.36.3:6789],[v2:10.102.36.5:3300,v1:10.102.36.5:6789],[v2:10.102.36.7:3300,v1:10.102.36.7:6789]
+
+Create /etc/ceph/ceph.client.allvms-rw.keyring
+
+[client.allvms-rw]
+  key=AQBSlNlmd6eUBBAAQTux9IciKD1M67e7wOt4Gg==
+
+edit /etc/fstab
+10.102.36.7:6789,10.102.36.5:6789,10.102.36.3:6789:/volumes/_nogroup/0fea4126-d389-4414-8cdb-bb73a206f5f6/efed4d7f-622f-47c4-be12-835180390e80   /data ceph name=allvms-rw,noatime,nosuid,_netdev 0 0
+
+mkdir /data
+mount /data
