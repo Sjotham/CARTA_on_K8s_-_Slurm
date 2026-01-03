@@ -1,0 +1,18 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: external-cephfs
+provisioner: rook-ceph.cephfs.csi.ceph.com
+parameters:
+  clusterID: "0eb9d305-d18f-4d3e-805b-270b54f056c9"
+  fsName: "newFs"
+
+  csi.storage.k8s.io/provisioner-secret-name: "cephfs-secret"
+  csi.storage.k8s.io/provisioner-secret-namespace: "rook-ceph"
+  csi.storage.k8s.io/node-stage-secret-name: "cephfs-secret"
+  csi.storage.k8s.io/node-stage-secret-namespace: "rook-ceph"
+reclaimPolicy: Delete
+allowVolumeExpansion: true
+volumeBindingMode: Immediate
+mountOptions:
+  - noatime

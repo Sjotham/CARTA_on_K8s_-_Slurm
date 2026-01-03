@@ -10,14 +10,13 @@ metadata:
   namespace: carta
 spec:
   accessModes: ["ReadWriteMany"]
-  storageClassName: rook-cephfs
+  storageClassName: external-cephfs
   resources:
     requests:
       storage: 20Gi
   volumeMode: Filesystem
-
 ---
-# 3) Deployment (mounts PVC at /images)
+# Deployment (mounts PVC at /images)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -27,7 +26,8 @@ metadata:
 spec:
   replicas: 1
   strategy: { type: Recreate }
-  selector: { matchLabels: { app: carta-backend, instance: a } }
+  selector:
+    matchLabels: { app: carta-backend, instance: a }
   template:
     metadata:
       labels: { app: carta-backend, instance: a }
@@ -41,14 +41,27 @@ spec:
         - name: carta-backend
           image: cartavis/carta:beta
           imagePullPolicy: IfNotPresent
-          ports: [{ name: http, containerPort: 3002 }]
+          ports:
+            - name: http
+              containerPort: 3002
           volumeMounts:
             - name: carta-storage
               mountPath: /images
               subPath: a
-          startupProbe: { tcpSocket: { port: 3002 }, failureThreshold: 30, periodSeconds: 2 }
-          readinessProbe: { tcpSocket: { port: 3002 }, initialDelaySeconds: 10, periodSeconds: 10, failureThreshold: 3 }
-          livenessProbe:  { tcpSocket: { port: 3002 }, initialDelaySeconds: 30, periodSeconds: 10, failureThreshold: 3 }
+          startupProbe:
+            tcpSocket: { port: 3002 }
+            failureThreshold: 30
+            periodSeconds: 2
+          readinessProbe:
+            tcpSocket: { port: 3002 }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            tcpSocket: { port: 3002 }
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 3
       volumes:
         - name: carta-storage
           persistentVolumeClaim:
@@ -66,4 +79,4 @@ spec:
     - name: tcp
       port: 3002
       targetPort: 3002
-   #   nodePort: 32002
+      # nodePort: 32002
