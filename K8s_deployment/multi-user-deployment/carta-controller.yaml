@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: carta-controller-b
+  namespace: carta
+  labels:
+    app: carta-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: carta-controller
+  template:
+    metadata:
+      labels:
+        app: carta-controller
+    spec:
+      serviceAccountName: carta-controller-sa
+      containers:
+      - name: carta-controller
+        image: quay.io/aikema/carta_k8s_controller_static:latest
+        imagePullPolicy: Always
+        env:
+        - name: K8S_NAMESPACE
+          value: "carta"
+        - name: K8S_IMAGES_PVC
+          value: "cephfs-images-pvc"
+        - name: CARTA_CONFIG
+          value: /etc/carta/config.json
+        ports:
+        - containerPort: 8000
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - mountPath: /etc/carta
+          name: carta-config
+        - mountPath: /var/lib/extrausers
+          name: nss-extrausers
+        - name: carta-host-keys
+          mountPath: /carta-host-keys
+        - name: nsswitch
+          mountPath: /etc/nsswitch.conf
+          subPath: nsswitch.conf
+      volumes:
+      - name: nsswitch
+        configMap:
+          name: nsswitch-conf
+          items:
+            - key: nsswitch.conf
+              path: nsswitch.conf
+      - name: carta-config
+        secret:
+          secretName: carta-config
+      - name: carta-host-keys
+        hostPath:
+          path: /etc/carta
+          type: Directory
+      - name: nss-extrausers
+        secret:
+          secretName: carta-extrausers
+          defaultMode: 0644
