@@ -9,7 +9,7 @@
         }
     },
     "database": {
-        "uri": "mongodb://admin:admin123@mongodb-svc.mongodb.svc.cluster.local:27017/CARTA?authSource=admin&replicaSet=mongodb",
+        "uri": "mongodb://admin:admin123@mongodb-svc.mongodb.svc.cluster.local:27017/CARTA?authSource=admin&replicaSet=mongodb"
         "databaseName": "CARTA"
     },
     "serverPort": 8000,

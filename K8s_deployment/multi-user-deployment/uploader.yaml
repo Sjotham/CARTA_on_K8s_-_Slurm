@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: uploader
+  namespace: carta
+spec:
+  restartPolicy: Never
+  volumes:
+    - name: data
+      persistentVolumeClaim:
+        claimName: cephfs-images-pvc
+  containers:
+    - name: uploader
+      image: busybox
+      command:
+        - sleep
+        - "3600"
+      volumeMounts:
+        - name: data
+          mountPath: /data
+

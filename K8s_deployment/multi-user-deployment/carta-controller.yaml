@@ -1,7 +1,48 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: carta-controller-role
+  namespace: carta
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - create
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - "pods/log"
+  verbs:
+  - get
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: carta-controller-sa
+  namespace: carta
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: carta-controller-role-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: carta-controller-role
+subjects:
+- kind: ServiceAccount
+  name: carta-controller-sa
+  namespace: carta
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: carta-controller-b
+  name: carta-controller
   namespace: carta
   labels:
     app: carta-controller
@@ -18,7 +59,7 @@ spec:
       serviceAccountName: carta-controller-sa
       containers:
       - name: carta-controller
-        image: quay.io/aikema/carta_k8s_controller_static:latest
+        image: sjotham/carta-controller:ec2-latest
         imagePullPolicy: Always
         env:
         - name: K8S_NAMESPACE
@@ -27,6 +68,8 @@ spec:
           value: "cephfs-images-pvc"
         - name: CARTA_CONFIG
           value: /etc/carta/config.json
+        - name: K8S_BACKEND_IMG
+          value: cartavis/carta:beta
         ports:
         - containerPort: 8000
         securityContext:
@@ -38,16 +81,14 @@ spec:
           name: nss-extrausers
         - name: carta-host-keys
           mountPath: /carta-host-keys
-        - name: nsswitch
+        - name: nsswitch-conf
           mountPath: /etc/nsswitch.conf
           subPath: nsswitch.conf
+          readOnly: true
       volumes:
-      - name: nsswitch
-        configMap:
-          name: nsswitch-conf
-          items:
-            - key: nsswitch.conf
-              path: nsswitch.conf
+      - name: nsswitch-conf
+        secret:
+          secretName: nsswitch-conf
       - name: carta-config
         secret:
           secretName: carta-config
@@ -58,4 +99,5 @@ spec:
       - name: nss-extrausers
         secret:
           secretName: carta-extrausers
-          defaultMode: 0644
+          defaultMode: 0400
+
